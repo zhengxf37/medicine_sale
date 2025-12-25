@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% block page_title %}进货单详情{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-info-circle"></i> 单据信息
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless mb-0">
+                    <tr>
+                        <td class="text-muted">单号</td>
+                        <td class="fw-bold">{{ order.po_id }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">供应商</td>
+                        <td>{{ order.supplier.sup_name }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">经手人</td>
+                        <td>{{ order.employee.emp_name }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">入库时间</td>
+                        <td>{{ order.purchase_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">总金额</td>
+                        <td class="fw-bold text-primary fs-5">¥{{ "%.2f"|format(order.total_amount or 0) }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">状态</td>
+                        <td>
+                            {% if order.status == 1 %}
+                            <span class="badge bg-success">正常</span>
+                            {% else %}
+                            <span class="badge bg-secondary">已撤销</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+                
+                <hr>
+                <a href="{{ url_for('purchase.list') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> 返回列表
+                </a>
+                {% if order.status == 1 %}
+                <form action="{{ url_for('purchase.cancel', po_id=order.po_id) }}" method="POST" 
+                      class="d-inline" onsubmit="return confirm('确定要撤销此进货单吗？库存将被回滚！')">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-undo"></i> 撤销
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-list"></i> 进货明细
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>药品名称</th>
+                                <th>规格</th>
+                                <th>批号</th>
+                                <th>有效期</th>
+                                <th>数量</th>
+                                <th>单价</th>
+                                <th>小计</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for d in details %}
+                            <tr>
+                                <td>{{ d.medicine.med_name }}</td>
+                                <td>{{ d.medicine.spec }}</td>
+                                <td>{{ d.batch_no }}</td>
+                                <td>{{ d.expiry_date }}</td>
+                                <td>{{ d.quantity }}</td>
+                                <td>¥{{ "%.2f"|format(d.unit_purc_price) }}</td>
+                                <td class="fw-bold">¥{{ "%.2f"|format(d.subtotal) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

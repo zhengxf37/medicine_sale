@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block page_title %}销售单详情{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header"><i class="fas fa-info-circle"></i> 单据信息</div>
+            <div class="card-body">
+                <table class="table table-borderless mb-0">
+                    <tr><td class="text-muted">单号</td><td class="fw-bold">{{ order.so_id }}</td></tr>
+                    <tr><td class="text-muted">客户</td><td>{{ order.customer.cus_name if order.customer else '散客' }}</td></tr>
+                    <tr><td class="text-muted">销售员</td><td>{{ order.employee.emp_name }}</td></tr>
+                    <tr><td class="text-muted">交易时间</td><td>{{ order.sale_time.strftime('%Y-%m-%d %H:%M') }}</td></tr>
+                    <tr><td class="text-muted">总金额</td><td class="fw-bold text-success fs-5">¥{{ "%.2f"|format(order.total_price or 0) }}</td></tr>
+                    <tr><td class="text-muted">状态</td><td>
+                        {% if order.status == 1 %}<span class="badge bg-success">正常</span>
+                        {% else %}<span class="badge bg-secondary">已退货</span>{% endif %}
+                    </td></tr>
+                </table>
+                <hr>
+                <a href="{{ url_for('sales.list') }}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> 返回</a>
+                {% if order.status == 1 %}
+                <form action="{{ url_for('sales.refund', so_id=order.so_id) }}" method="POST" class="d-inline"
+                      onsubmit="return confirm('确定退货？库存将恢复')">
+                    <button type="submit" class="btn btn-danger"><i class="fas fa-undo"></i> 退货</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header"><i class="fas fa-list"></i> 销售明细</div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr><th>药品名称</th><th>规格</th><th>批号</th><th>数量</th><th>单价</th><th>小计</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for sd, sb, m in details %}
+                        <tr>
+                            <td>{{ m.med_name }}</td>
+                            <td>{{ m.spec }}</td>
+                            <td>{{ sb.batch_no }}</td>
+                            <td>{{ sd.quantity }}</td>
+                            <td>¥{{ "%.2f"|format(sd.unit_sell_price) }}</td>
+                            <td class="fw-bold">¥{{ "%.2f"|format(sd.subtotal) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

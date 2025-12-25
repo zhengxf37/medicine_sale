@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+
+{% block page_title %}库存管理{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stat-card bg-primary">
+            <div class="stat-value">¥{{ "%.0f"|format(total_value) }}</div>
+            <div class="stat-label">库存总价值</div>
+            <i class="fas fa-coins stat-icon"></i>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stat-card bg-success">
+            <div class="stat-value">{{ medicine_count }}</div>
+            <div class="stat-label">药品种类</div>
+            <i class="fas fa-capsules stat-icon"></i>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stat-card bg-info">
+            <div class="stat-value">{{ batch_count }}</div>
+            <div class="stat-label">库存批次</div>
+            <i class="fas fa-boxes stat-icon"></i>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <a href="{{ url_for('stock.low_stock') }}" class="text-decoration-none">
+            <div class="stat-card bg-warning">
+                <div class="stat-value">{{ low_stock|length }}</div>
+                <div class="stat-label">低库存预警</div>
+                <i class="fas fa-exclamation-triangle stat-icon"></i>
+            </div>
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header"><i class="fas fa-clock"></i> 临期药品统计</div>
+            <div class="card-body">
+                <table class="table mb-0">
+                    <tr>
+                        <td><span class="badge bg-danger">已过期</span></td>
+                        <td>{{ expiry_stats.expired }} 批次</td>
+                        <td><a href="{{ url_for('stock.expiring', type='expired') }}" class="btn btn-sm btn-outline-danger">查看</a></td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge bg-danger">1月内过期</span></td>
+                        <td>{{ expiry_stats.month1 }} 批次</td>
+                        <td><a href="{{ url_for('stock.expiring', type='month1') }}" class="btn btn-sm btn-outline-warning">查看</a></td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge bg-warning">3月内过期</span></td>
+                        <td>{{ expiry_stats.month3 }} 批次</td>
+                        <td><a href="{{ url_for('stock.expiring', type='month3') }}" class="btn btn-sm btn-outline-info">查看</a></td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge bg-info">6月内过期</span></td>
+                        <td>{{ expiry_stats.month6 }} 批次</td>
+                        <td><a href="{{ url_for('stock.expiring', type='month6') }}" class="btn btn-sm btn-outline-info">查看</a></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header"><i class="fas fa-exclamation-circle"></i> 低库存药品 Top10</div>
+            <div class="card-body p-0">
+                <table class="table mb-0">
+                    <thead><tr><th>药品名称</th><th>库存</th><th>预警线</th></tr></thead>
+                    <tbody>
+                        {% for m in low_stock %}
+                        <tr class="{{ 'table-danger' if m.total_stock == 0 else 'table-warning' }}">
+                            <td>{{ m.med_name }}</td>
+                            <td class="fw-bold">{{ m.total_stock }}</td>
+                            <td>{{ m.alert_qty }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="3" class="text-center text-muted">无低库存药品</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between">
+                <span><i class="fas fa-tools"></i> 快捷操作</span>
+            </div>
+            <div class="card-body">
+                <a href="{{ url_for('stock.batch_list') }}" class="btn btn-outline-primary me-2">
+                    <i class="fas fa-list"></i> 批次库存查询
+                </a>
+                <a href="{{ url_for('stock.inventory_check') }}" class="btn btn-outline-success me-2">
+                    <i class="fas fa-clipboard-check"></i> 库存盘点
+                </a>
+                <a href="{{ url_for('stock.check_history') }}" class="btn btn-outline-info">
+                    <i class="fas fa-history"></i> 盘点历史
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block page_title %}盘点历史{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header"><i class="fas fa-history"></i> 盘点历史记录</div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr><th>时间</th><th>药品名称</th><th>批号</th><th>账面</th><th>实物</th><th>差异</th><th>盈亏金额</th><th>盘点人</th><th>备注</th></tr>
+                </thead>
+                <tbody>
+                    {% for check, batch, med in pagination.items %}
+                    <tr class="{{ 'table-danger' if check.diff_qty < 0 else ('table-success' if check.diff_qty > 0 else '') }}">
+                        <td>{{ check.check_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>{{ med.med_name }}</td>
+                        <td>{{ batch.batch_no }}</td>
+                        <td>{{ check.book_qty }}</td>
+                        <td>{{ check.actual_qty }}</td>
+                        <td class="fw-bold">
+                            {% if check.diff_qty > 0 %}+{% endif %}{{ check.diff_qty }}
+                        </td>
+                        <td>
+                            {% if check.diff_amount and check.diff_amount != 0 %}
+                            <span class="{{ 'text-success' if check.diff_amount > 0 else 'text-danger' }}">
+                                {% if check.diff_amount > 0 %}+{% endif %}¥{{ "%.2f"|format(check.diff_amount) }}
+                            </span>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td>{{ check.employee.emp_name }}</td>
+                        <td>{{ check.remark or '-' }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="9" class="text-center text-muted py-4">暂无盘点记录</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if pagination.pages > 1 %}
+        <nav><ul class="pagination justify-content-center mb-0">
+            {% for p in pagination.iter_pages() %}{% if p %}
+            <li class="page-item {{ 'active' if p == pagination.page }}">
+                <a class="page-link" href="{{ url_for('stock.check_history', page=p) }}">{{ p }}</a>
+            </li>
+            {% endif %}{% endfor %}
+        </ul></nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

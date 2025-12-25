@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block page_title %}畅销榜单{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header"><i class="fas fa-trophy"></i> 畅销药品排行</div>
+    <div class="card-body">
+        <form method="GET" class="row g-3 mb-4">
+            <div class="col-md-3">
+                <select class="form-select" name="days">
+                    <option value="7" {{ 'selected' if days == 7 }}>近7天</option>
+                    <option value="30" {{ 'selected' if days == 30 }}>近30天</option>
+                    <option value="90" {{ 'selected' if days == 90 }}>近90天</option>
+                    <option value="365" {{ 'selected' if days == 365 }}>近一年</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> 查询</button>
+            </div>
+        </form>
+        
+        <table class="table">
+            <thead><tr><th>排名</th><th>药品名称</th><th>规格</th><th>类别</th><th>销售数量</th><th>销售额</th><th>订单数</th></tr></thead>
+            <tbody>
+                {% for r in data %}
+                <tr>
+                    <td>
+                        {% if loop.index == 1 %}<span class="badge bg-warning">🥇</span>
+                        {% elif loop.index == 2 %}<span class="badge bg-secondary">🥈</span>
+                        {% elif loop.index == 3 %}<span class="badge bg-danger">🥉</span>
+                        {% else %}{{ loop.index }}{% endif %}
+                    </td>
+                    <td class="fw-bold">{{ r.med_name }}</td>
+                    <td>{{ r.spec }}</td>
+                    <td><span class="badge {{ 'bg-danger' if r.category == '处方药' else 'bg-success' }}">{{ r.category }}</span></td>
+                    <td class="fw-bold text-primary">{{ r.total_sold }}</td>
+                    <td class="text-success">¥{{ "%.2f"|format(r.total_revenue or 0) }}</td>
+                    <td>{{ r.order_count }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="text-center text-muted">暂无销售数据</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

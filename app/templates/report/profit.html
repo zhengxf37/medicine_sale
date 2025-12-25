@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block page_title %}利润分析{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header"><i class="fas fa-coins"></i> 月度利润分析</div>
+    <div class="card-body">
+        <form method="GET" class="row g-3 mb-4">
+            <div class="col-md-2">
+                <select class="form-select" name="year">
+                    {% for y in range(2020, 2030) %}
+                    <option value="{{ y }}" {{ 'selected' if y == data.year }}>{{ y }}年</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" name="month">
+                    {% for m in range(1, 13) %}
+                    <option value="{{ m }}" {{ 'selected' if m == data.month }}>{{ m }}月</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> 查询</button>
+            </div>
+        </form>
+        
+        <div class="row">
+            <div class="col-lg-6">
+                <table class="table table-bordered">
+                    <tr><th width="40%">销售总额</th><td class="text-success fs-5">¥{{ "%.2f"|format(data.total_sales) }}</td></tr>
+                    <tr><th>销售成本</th><td>¥{{ "%.2f"|format(data.total_cost) }}</td></tr>
+                    <tr><th>毛利润</th><td class="text-warning fs-5">¥{{ "%.2f"|format(data.gross_profit) }}</td></tr>
+                    <tr><th>毛利率</th><td>{{ data.gross_margin }}%</td></tr>
+                    <tr><th>进货总额</th><td class="text-primary">¥{{ "%.2f"|format(data.purchase_total) }}</td></tr>
+                    <tr><th>盘点损益</th><td class="{{ 'text-success' if data.inventory_loss >= 0 else 'text-danger' }}">
+                        {% if data.inventory_loss >= 0 %}+{% endif %}¥{{ "%.2f"|format(data.inventory_loss) }}
+                    </td></tr>
+                </table>
+            </div>
+            <div class="col-lg-6">
+                <canvas id="profitChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.bootcdn.net/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script>
+new Chart(document.getElementById('profitChart'), {
+    type: 'doughnut',
+    data: {
+        labels: ['成本', '毛利'],
+        datasets: [{
+            data: [{{ data.total_cost }}, {{ data.gross_profit }}],
+            backgroundColor: ['#e74c3c', '#27ae60']
+        }]
+    }
+});
+</script>
+{% endblock %}

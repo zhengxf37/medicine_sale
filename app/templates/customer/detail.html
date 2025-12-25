@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block page_title %}客户详情{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header"><i class="fas fa-user"></i> 客户信息</div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr><td class="text-muted">客户ID</td><td>{{ customer.cus_id }}</td></tr>
+                    <tr><td class="text-muted">姓名</td><td class="fw-bold">{{ customer.cus_name }}</td></tr>
+                    <tr><td class="text-muted">性别</td><td>{{ customer.gender }}</td></tr>
+                    <tr><td class="text-muted">年龄</td><td>{{ customer.age or '-' }}</td></tr>
+                    <tr><td class="text-muted">手机</td><td>{{ customer.phone or '-' }}</td></tr>
+                    <tr><td class="text-muted">累计消费</td><td class="text-success fw-bold">¥{{ "%.2f"|format(customer.total_consume or 0) }}</td></tr>
+                    <tr><td class="text-muted">病史/过敏史</td><td>{{ customer.medical_history or '无' }}</td></tr>
+                </table>
+                <a href="{{ url_for('customer.edit', cus_id=customer.cus_id) }}" class="btn btn-primary"><i class="fas fa-edit"></i> 编辑</a>
+                <a href="{{ url_for('customer.list') }}" class="btn btn-secondary">返回</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header"><i class="fas fa-history"></i> 购买历史 (最近20笔)</div>
+            <div class="card-body">
+                <table class="table">
+                    <thead><tr><th>单号</th><th>金额</th><th>时间</th><th>状态</th></tr></thead>
+                    <tbody>
+                        {% for o in orders %}
+                        <tr>
+                            <td><a href="{{ url_for('sales.detail', so_id=o.so_id) }}">{{ o.so_id }}</a></td>
+                            <td class="text-success">¥{{ "%.2f"|format(o.total_price or 0) }}</td>
+                            <td>{{ o.sale_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{% if o.status == 1 %}<span class="badge bg-success">正常</span>{% else %}<span class="badge bg-secondary">已退货</span>{% endif %}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="text-center text-muted">暂无购买记录</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

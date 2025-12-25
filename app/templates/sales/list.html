@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block page_title %}销售管理{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-cash-register"></i> 销售单列表</span>
+        <a href="{{ url_for('sales.create') }}" class="btn btn-primary btn-sm">
+            <i class="fas fa-plus"></i> 销售开单
+        </a>
+    </div>
+    <div class="card-body">
+        <form method="GET" class="row g-3 mb-4">
+            <div class="col-md-3">
+                <input type="date" class="form-control" name="start_date" value="{{ start_date }}">
+            </div>
+            <div class="col-md-3">
+                <input type="date" class="form-control" name="end_date" value="{{ end_date }}">
+            </div>
+            <div class="col-md-3">
+                <input type="text" class="form-control" name="keyword" placeholder="单号..." value="{{ keyword }}">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-outline-primary w-100">
+                    <i class="fas fa-search"></i> 查询
+                </button>
+            </div>
+        </form>
+        
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>销售单号</th>
+                        <th>客户</th>
+                        <th>销售员</th>
+                        <th>总金额</th>
+                        <th>交易时间</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for o in pagination.items %}
+                    <tr>
+                        <td><a href="{{ url_for('sales.detail', so_id=o.so_id) }}">{{ o.so_id }}</a></td>
+                        <td>{{ o.customer.cus_name if o.customer else '散客' }}</td>
+                        <td>{{ o.employee.emp_name }}</td>
+                        <td class="fw-bold text-success">¥{{ "%.2f"|format(o.total_price or 0) }}</td>
+                        <td>{{ o.sale_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            {% if o.status == 1 %}
+                            <span class="badge bg-success">正常</span>
+                            {% else %}
+                            <span class="badge bg-secondary">已退货</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('sales.detail', so_id=o.so_id) }}" class="btn btn-sm btn-outline-info">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="7" class="text-center text-muted py-4">暂无数据</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if pagination.pages > 1 %}
+        <nav>
+            <ul class="pagination justify-content-center mb-0">
+                {% for p in pagination.iter_pages() %}
+                    {% if p %}
+                    <li class="page-item {{ 'active' if p == pagination.page }}">
+                        <a class="page-link" href="{{ url_for('sales.list', page=p) }}">{{ p }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

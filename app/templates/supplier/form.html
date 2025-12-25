@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block page_title %}{{ '编辑供应商' if action == 'edit' else '添加供应商' }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header"><i class="fas fa-{{ 'edit' if action == 'edit' else 'plus' }}"></i> {{ '编辑供应商' if action == 'edit' else '添加供应商' }}</div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">供应商名称 <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="sup_name" required value="{{ supplier.sup_name if supplier else '' }}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">联系人</label>
+                    <input type="text" class="form-control" name="contact_name" value="{{ supplier.contact_name if supplier else '' }}">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">联系电话 <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="phone" required value="{{ supplier.phone if supplier else '' }}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">许可证号</label>
+                    <input type="text" class="form-control" name="license_no" value="{{ supplier.license_no if supplier else '' }}">
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">地址</label>
+                <input type="text" class="form-control" name="address" value="{{ supplier.address if supplier else '' }}">
+            </div>
+            {% if action == 'edit' %}
+            <div class="mb-3">
+                <label class="form-label">状态</label>
+                <select class="form-select" name="status">
+                    <option value="1" {{ 'selected' if supplier.status == 1 }}>合作中</option>
+                    <option value="0" {{ 'selected' if supplier.status == 0 }}>停止合作</option>
+                </select>
+            </div>
+            {% endif %}
+            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> 保存</button>
+            <a href="{{ url_for('supplier.list') }}" class="btn btn-secondary">返回</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

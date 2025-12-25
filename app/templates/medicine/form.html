@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block page_title %}{{ '编辑药品' if action == 'edit' else '添加药品' }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <i class="fas fa-{{ 'edit' if action == 'edit' else 'plus' }}"></i>
+        {{ '编辑药品' if action == 'edit' else '添加药品' }}
+    </div>
+    <div class="card-body">
+        <form method="POST" class="needs-validation" novalidate>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">药品名称 <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="med_name" required
+                           value="{{ medicine.med_name if medicine else '' }}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">规格 <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="spec" required
+                           placeholder="如: 0.25g*24粒"
+                           value="{{ medicine.spec if medicine else '' }}">
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">类别</label>
+                    <select class="form-select" name="category">
+                        <option value="OTC" {{ 'selected' if medicine and medicine.category == 'OTC' }}>OTC</option>
+                        <option value="处方药" {{ 'selected' if medicine and medicine.category == '处方药' }}>处方药</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">单位</label>
+                    <select class="form-select" name="unit">
+                        <option value="盒" {{ 'selected' if medicine and medicine.unit == '盒' }}>盒</option>
+                        <option value="瓶" {{ 'selected' if medicine and medicine.unit == '瓶' }}>瓶</option>
+                        <option value="支" {{ 'selected' if medicine and medicine.unit == '支' }}>支</option>
+                        <option value="袋" {{ 'selected' if medicine and medicine.unit == '袋' }}>袋</option>
+                        <option value="片" {{ 'selected' if medicine and medicine.unit == '片' }}>片</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">库存预警线</label>
+                    <input type="number" class="form-control" name="alert_qty" min="1"
+                           value="{{ medicine.alert_qty if medicine else 10 }}">
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">生产厂家</label>
+                <input type="text" class="form-control" name="factory"
+                       value="{{ medicine.factory if medicine else '' }}">
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">参考进价 (元)</label>
+                    <input type="number" class="form-control" name="ref_buy_price" 
+                           step="0.01" min="0"
+                           value="{{ medicine.ref_buy_price if medicine else '' }}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">参考售价 (元)</label>
+                    <input type="number" class="form-control" name="ref_sell_price" 
+                           step="0.01" min="0"
+                           value="{{ medicine.ref_sell_price if medicine else '' }}">
+                </div>
+            </div>
+            
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> 保存
+                </button>
+                <a href="{{ url_for('medicine.list') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> 返回
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

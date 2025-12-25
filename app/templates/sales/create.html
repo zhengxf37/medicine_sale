@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+
+{% block page_title %}销售开单{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <i class="fas fa-cash-register"></i> 销售开单
+    </div>
+    <div class="card-body">
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <label class="form-label">客户 (可选)</label>
+                <select class="form-select" id="cus_id">
+                    <option value="">散客</option>
+                </select>
+                <small class="text-muted">输入姓名或手机号搜索客户</small>
+            </div>
+        </div>
+        
+        <h6><i class="fas fa-list"></i> 销售明细</h6>
+        <div class="table-responsive mb-3">
+            <table class="table" id="detailTable">
+                <thead>
+                    <tr>
+                        <th width="30%">药品</th>
+                        <th width="15%">可用库存</th>
+                        <th width="15%">数量</th>
+                        <th width="15%">单价</th>
+                        <th width="15%">小计</th>
+                        <th width="10%"></th>
+                    </tr>
+                </thead>
+                <tbody id="detailBody"></tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="4" class="text-end fw-bold">合计:</td>
+                        <td class="fw-bold text-success fs-5" id="totalAmount">¥0.00</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        
+        <button type="button" class="btn btn-outline-success mb-4" onclick="addRow()">
+            <i class="fas fa-plus"></i> 添加药品
+        </button>
+        
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-primary btn-lg" onclick="submitOrder()">
+                <i class="fas fa-check"></i> 确认结算
+            </button>
+            <a href="{{ url_for('sales.list') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> 返回
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let rowIndex = 0;
+
+function addRow() {
+    const tbody = document.getElementById('detailBody');
+    const row = document.createElement('tr');
+    row.id = 'row_' + rowIndex;
+    
+    row.innerHTML = `
+        <td>
+            <input type="text" class="form-control form-control-sm med-search" 
+                   placeholder="输入药品名称搜索..." data-idx="${rowIndex}">
+            <input type="hidden" name="med_id">
+        </td>
+        <td class="available-stock text-muted">-</td>
+        <td><input type="number" class="form-control form-control-sm" name="quantity" min="1" value="1" onchange="calcRow(${rowIndex})"></td>
+        <td><input type="number" class="form-control form-control-sm" name="unit_price" step="0.01" min="0" value="0" onchange="calcRow(${rowIndex})"></td>
+        <td class="subtotal fw-bold">¥0.00</td>
+        <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(${rowIndex})"><i class="fas fa-times"></i></button></td>
+    `;
+    
+    tbody.appendChild(row);
+    
+    // 绑定搜索事件
+    const input = row.querySelector('.med-search');
+    let timer;
+    input.addEventListener('input', function() {
+        clearTimeout(timer);
+        timer = setTimeout(() => searchMedicine(this, rowIndex), 300);
+    });
+    
+    rowIndex++;
+}
+
+function searchMedicine(input, idx) {
+    const keyword = input.value;
+    if (keyword.length < 1) return;
+    
+    fetch('/medicine/api/search?q=' + encodeURIComponent(keyword))
+        .then(res => res.json())
+        .then(data => {
+            showDropdown(input, data, idx);
+        });
+}
+
+function showDropdown(input, items, idx) {
+    let dropdown = input.parentElement.querySelector('.dropdown-menu');
+    if (!dropdown) {
+        dropdown = document.createElement('div');
+        dropdown.className = 'dropdown-menu show';
+        dropdown.style.cssText = 'position:absolute;width:100%;max-height:200px;overflow-y:auto;z-index:1000;';
+        input.parentElement.style.position = 'relative';
+        input.parentElement.appendChild(dropdown);
+    }
+    
+    dropdown.innerHTML = items.map(m => `
+        <a class="dropdown-item" href="#" onclick="selectMedicine(${idx}, ${m.id}, '${m.name} (${m.spec})', ${m.sell_price}); return false;">
+            ${m.name} <small class="text-muted">${m.spec}</small> 
+            <span class="badge bg-info float-end">库存:${m.stock}</span>
+        </a>
+    `).join('') || '<span class="dropdown-item text-muted">无结果</span>';
+}
+
+function selectMedicine(idx, medId, name, price) {
+    const row = document.getElementById('row_' + idx);
+    row.querySelector('.med-search').value = name;
+    row.querySelector('[name="med_id"]').value = medId;
+    row.querySelector('[name="unit_price"]').value = price;
+    
+    // 移除下拉
+    const dropdown = row.querySelector('.dropdown-menu');
+    if (dropdown) dropdown.remove();
+    
+    // 获取可用库存
+    fetch('/sales/api/available_stock/' + medId)
+        .then(res => res.json())
+        .then(data => {
+            row.querySelector('.available-stock').textContent = data.total_available;
+            row.querySelector('[name="quantity"]').max = data.total_available;
+        });
+    
+    calcRow(idx);
+}
+
+function calcRow(idx) {
+    const row = document.getElementById('row_' + idx);
+    if (!row) return;
+    
+    const qty = parseFloat(row.querySelector('[name="quantity"]').value) || 0;
+    const price = parseFloat(row.querySelector('[name="unit_price"]').value) || 0;
+    row.querySelector('.subtotal').textContent = '¥' + (qty * price).toFixed(2);
+    calcTotal();
+}
+
+function calcTotal() {
+    let total = 0;
+    document.querySelectorAll('.subtotal').forEach(td => {
+        total += parseFloat(td.textContent.replace('¥', '')) || 0;
+    });
+    document.getElementById('totalAmount').textContent = '¥' + total.toFixed(2);
+}
+
+function removeRow(idx) {
+    const row = document.getElementById('row_' + idx);
+    if (row) { row.remove(); calcTotal(); }
+}
+
+function submitOrder() {
+    const items = [];
+    document.querySelectorAll('#detailBody tr').forEach(row => {
+        const medId = row.querySelector('[name="med_id"]').value;
+        const quantity = row.querySelector('[name="quantity"]').value;
+        const unitPrice = row.querySelector('[name="unit_price"]').value;
+        
+        if (medId && quantity > 0) {
+            items.push({ med_id: medId, quantity: parseInt(quantity), unit_price: parseFloat(unitPrice) });
+        }
+    });
+    
+    if (items.length === 0) {
+        alert('请添加至少一个药品');
+        return;
+    }
+    
+    const cusId = document.getElementById('cus_id').value;
+    
+    fetch('{{ url_for("sales.create") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({cus_id: cusId, items: items})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            window.location.href = '{{ url_for("sales.list") }}';
+        } else {
+            alert('错误: ' + data.message);
+        }
+    })
+    .catch(err => alert('请求失败'));
+}
+
+addRow();
+</script>
+{% endblock %}

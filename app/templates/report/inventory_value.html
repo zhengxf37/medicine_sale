@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block page_title %}库存资产评估{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header"><i class="fas fa-warehouse"></i> 库存资产评估</div>
+    <div class="card-body">
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="alert alert-primary"><strong>库存总量:</strong> {{ summary.total_qty }} 件</div>
+            </div>
+            <div class="col-md-4">
+                <div class="alert alert-info"><strong>成本总值:</strong> ¥{{ "%.2f"|format(summary.total_cost) }}</div>
+            </div>
+            <div class="col-md-4">
+                <div class="alert alert-success"><strong>售价总值:</strong> ¥{{ "%.2f"|format(summary.total_value) }}</div>
+            </div>
+        </div>
+        
+        <h6>按类别统计</h6>
+        <table class="table">
+            <thead><tr><th>类别</th><th>药品种数</th><th>库存数量</th><th>成本价值</th><th>售价价值</th></tr></thead>
+            <tbody>
+                {% for r in by_category %}
+                <tr>
+                    <td><span class="badge {{ 'bg-danger' if r.category == '处方药' else 'bg-success' }}">{{ r.category }}</span></td>
+                    <td>{{ r.medicine_count }}</td>
+                    <td>{{ r.total_qty }}</td>
+                    <td>¥{{ "%.2f"|format(r.total_cost or 0) }}</td>
+                    <td>¥{{ "%.2f"|format(r.total_value or 0) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

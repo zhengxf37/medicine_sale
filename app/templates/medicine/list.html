@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block page_title %}药品管理{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-capsules"></i> 药品列表</span>
+        <a href="{{ url_for('medicine.add') }}" class="btn btn-primary btn-sm">
+            <i class="fas fa-plus"></i> 添加药品
+        </a>
+    </div>
+    <div class="card-body">
+        <!-- 搜索栏 -->
+        <form method="GET" class="row g-3 mb-4">
+            <div class="col-md-4">
+                <input type="text" class="form-control" name="keyword" 
+                       placeholder="搜索药品名称..." value="{{ keyword }}">
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" name="category">
+                    <option value="">全部类别</option>
+                    <option value="OTC" {{ 'selected' if category == 'OTC' }}>OTC</option>
+                    <option value="处方药" {{ 'selected' if category == '处方药' }}>处方药</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-outline-primary w-100">
+                    <i class="fas fa-search"></i> 搜索
+                </button>
+            </div>
+        </form>
+        
+        <!-- 表格 -->
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>药品名称</th>
+                        <th>规格</th>
+                        <th>类别</th>
+                        <th>单位</th>
+                        <th>进价</th>
+                        <th>售价</th>
+                        <th>库存</th>
+                        <th>预警线</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in pagination.items %}
+                    <tr class="{{ 'table-warning' if m.is_low_stock }}">
+                        <td>{{ m.med_id }}</td>
+                        <td>
+                            <a href="{{ url_for('medicine.detail', med_id=m.med_id) }}">{{ m.med_name }}</a>
+                        </td>
+                        <td>{{ m.spec }}</td>
+                        <td>
+                            <span class="badge {{ 'bg-danger' if m.category == '处方药' else 'bg-success' }}">
+                                {{ m.category }}
+                            </span>
+                        </td>
+                        <td>{{ m.unit }}</td>
+                        <td>¥{{ "%.2f"|format(m.ref_buy_price or 0) }}</td>
+                        <td>¥{{ "%.2f"|format(m.ref_sell_price or 0) }}</td>
+                        <td>
+                            {% if m.is_low_stock %}
+                            <span class="text-danger fw-bold">{{ m.total_stock }}</span>
+                            <i class="fas fa-exclamation-triangle text-warning"></i>
+                            {% else %}
+                            {{ m.total_stock }}
+                            {% endif %}
+                        </td>
+                        <td>{{ m.alert_qty }}</td>
+                        <td>
+                            <a href="{{ url_for('medicine.edit', med_id=m.med_id) }}" 
+                               class="btn btn-sm btn-outline-primary btn-action">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="{{ url_for('medicine.detail', med_id=m.med_id) }}" 
+                               class="btn btn-sm btn-outline-info btn-action">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="10" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                            暂无数据
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 分页 -->
+        {% if pagination.pages > 1 %}
+        <nav>
+            <ul class="pagination justify-content-center mb-0">
+                <li class="page-item {{ 'disabled' if not pagination.has_prev }}">
+                    <a class="page-link" href="{{ url_for('medicine.list', page=pagination.prev_num, keyword=keyword, category=category) }}">上一页</a>
+                </li>
+                {% for p in pagination.iter_pages() %}
+                    {% if p %}
+                    <li class="page-item {{ 'active' if p == pagination.page }}">
+                        <a class="page-link" href="{{ url_for('medicine.list', page=p, keyword=keyword, category=category) }}">{{ p }}</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                {% endfor %}
+                <li class="page-item {{ 'disabled' if not pagination.has_next }}">
+                    <a class="page-link" href="{{ url_for('medicine.list', page=pagination.next_num, keyword=keyword, category=category) }}">下一页</a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block page_title %}{{ '编辑员工' if action == 'edit' else '添加员工' }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header"><i class="fas fa-{{ 'edit' if action == 'edit' else 'plus' }}"></i> {{ '编辑员工' if action == 'edit' else '添加员工' }}</div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">工号 <span class="text-danger">*</span></label>
+                    <input type="number" class="form-control" name="emp_id" required 
+                           value="{{ employee.emp_id if employee else '' }}" {{ 'readonly' if action == 'edit' }}>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">姓名 <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="emp_name" required value="{{ employee.emp_name if employee else '' }}">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">密码 {{ '' if action == 'edit' else '<span class="text-danger">*</span>' | safe }}</label>
+                    <input type="password" class="form-control" name="password" {{ '' if action == 'edit' else 'required' }}>
+                    {% if action == 'edit' %}<small class="text-muted">留空表示不修改密码</small>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">角色</label>
+                    <select class="form-select" name="role">
+                        <option value="Admin" {{ 'selected' if employee and employee.role == 'Admin' }}>管理员</option>
+                        <option value="Sales" {{ 'selected' if not employee or employee.role == 'Sales' }}>销售员</option>
+                        <option value="Stock" {{ 'selected' if employee and employee.role == 'Stock' }}>库管员</option>
+                        <option value="Finance" {{ 'selected' if employee and employee.role == 'Finance' }}>财务</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">电话</label>
+                    <input type="text" class="form-control" name="phone" value="{{ employee.phone if employee else '' }}">
+                </div>
+                {% if action == 'edit' %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">状态</label>
+                    <select class="form-select" name="status">
+                        <option value="1" {{ 'selected' if employee.status == 1 }}>在职</option>
+                        <option value="0" {{ 'selected' if employee.status == 0 }}>离职</option>
+                    </select>
+                </div>
+                {% endif %}
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> 保存</button>
+            <a href="{{ url_for('auth.employee_list') }}" class="btn btn-secondary">返回</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

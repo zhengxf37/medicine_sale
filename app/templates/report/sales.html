@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block page_title %}销售报表{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header"><i class="fas fa-chart-line"></i> 销售报表</div>
+    <div class="card-body">
+        <form method="GET" class="row g-3 mb-4">
+            <div class="col-md-2">
+                <select class="form-select" name="type">
+                    <option value="daily" {{ 'selected' if report_type == 'daily' }}>日报表</option>
+                    <option value="monthly" {{ 'selected' if report_type == 'monthly' }}>月报表</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input type="date" class="form-control" name="start_date" value="{{ start_date }}">
+            </div>
+            <div class="col-md-3">
+                <input type="date" class="form-control" name="end_date" value="{{ end_date }}">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search"></i> 查询</button>
+            </div>
+        </form>
+        
+        <div class="row mb-4">
+            <div class="col-md-3"><div class="alert alert-primary mb-0"><strong>订单数:</strong> {{ summary.total_orders }}</div></div>
+            <div class="col-md-3"><div class="alert alert-info mb-0"><strong>销售数量:</strong> {{ summary.total_qty }}</div></div>
+            <div class="col-md-3"><div class="alert alert-success mb-0"><strong>销售额:</strong> ¥{{ "%.2f"|format(summary.total_sales) }}</div></div>
+            <div class="col-md-3"><div class="alert alert-warning mb-0"><strong>毛利:</strong> ¥{{ "%.2f"|format(summary.total_profit) }}</div></div>
+        </div>
+        
+        <table class="table">
+            <thead><tr><th>{{ '日期' if report_type == 'daily' else '月份' }}</th><th>订单数</th><th>销售数量</th><th>销售额</th><th>毛利</th></tr></thead>
+            <tbody>
+                {% for r in data %}
+                <tr>
+                    <td>{{ r.sale_date if report_type == 'daily' else r.sale_month }}</td>
+                    <td>{{ r.order_count }}</td>
+                    <td>{{ r.total_qty }}</td>
+                    <td class="text-success">¥{{ "%.2f"|format(r.total_sales or 0) }}</td>
+                    <td class="text-warning">¥{{ "%.2f"|format(r.total_profit or 0) }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" class="text-center text-muted">暂无数据</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

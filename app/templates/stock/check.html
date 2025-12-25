@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block page_title %}库存盘点{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header"><i class="fas fa-clipboard-check"></i> 库存盘点</div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr><th>药品名称</th><th>规格</th><th>批号</th><th>账面数量</th><th>实物数量</th><th>操作</th></tr>
+                </thead>
+                <tbody>
+                    {% for batch, med in batches %}
+                    <tr id="batch_{{ batch.batch_id }}">
+                        <td>{{ med.med_name }}</td>
+                        <td>{{ med.spec }}</td>
+                        <td>{{ batch.batch_no }}</td>
+                        <td class="book-qty">{{ batch.cur_batch_qty }}</td>
+                        <td>
+                            <input type="number" class="form-control form-control-sm actual-qty" 
+                                   style="width:100px" min="0" value="{{ batch.cur_batch_qty }}">
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="doCheck({{ batch.batch_id }})">
+                                <i class="fas fa-check"></i> 确认
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function doCheck(batchId) {
+    const row = document.getElementById('batch_' + batchId);
+    const actualQty = row.querySelector('.actual-qty').value;
+    const remark = prompt('备注(可选):') || '';
+    
+    fetch('{{ url_for("stock.inventory_check") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({batch_id: batchId, actual_qty: actualQty, remark: remark})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert('盘点成功');
+            row.querySelector('.book-qty').textContent = actualQty;
+        } else {
+            alert(data.message);
+        }
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block page_title %}{{ '编辑客户' if action == 'edit' else '添加客户' }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header"><i class="fas fa-{{ 'edit' if action == 'edit' else 'plus' }}"></i> {{ '编辑客户' if action == 'edit' else '添加客户' }}</div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">姓名 <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="cus_name" required value="{{ customer.cus_name if customer else '' }}">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">性别</label>
+                    <select class="form-select" name="gender">
+                        <option value="未知" {{ 'selected' if not customer or customer.gender == '未知' }}>未知</option>
+                        <option value="男" {{ 'selected' if customer and customer.gender == '男' }}>男</option>
+                        <option value="女" {{ 'selected' if customer and customer.gender == '女' }}>女</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">年龄</label>
+                    <input type="number" class="form-control" name="age" min="1" max="150" value="{{ customer.age if customer else '' }}">
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">手机号</label>
+                <input type="text" class="form-control" name="phone" value="{{ customer.phone if customer else '' }}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">病史/过敏史</label>
+                <textarea class="form-control" name="medical_history" rows="3">{{ customer.medical_history if customer else '' }}</textarea>
+                <small class="text-muted">记录过敏史可保障用药安全</small>
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> 保存</button>
+            <a href="{{ url_for('customer.list') }}" class="btn btn-secondary">返回</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

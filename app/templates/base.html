@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}药品销售管理系统{% endblock %}</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-width: 250px;
+        }
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background-color: #f4f6f9;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: linear-gradient(180deg, #2c3e50 0%, #1a252f 100%);
+            padding: 0;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        .sidebar-brand {
+            padding: 20px;
+            text-align: center;
+            background: rgba(0,0,0,0.1);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .sidebar-brand h4 {
+            color: #fff;
+            margin: 0;
+            font-weight: bold;
+        }
+        .sidebar-brand small {
+            color: rgba(255,255,255,0.6);
+            font-size: 12px;
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.7);
+            padding: 12px 20px;
+            border-left: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            color: #fff;
+            background: rgba(255,255,255,0.1);
+            border-left-color: #3498db;
+        }
+        .sidebar .nav-link i {
+            width: 25px;
+            margin-right: 10px;
+        }
+        .sidebar .nav-section {
+            color: rgba(255,255,255,0.4);
+            font-size: 12px;
+            padding: 15px 20px 5px;
+            text-transform: uppercase;
+        }
+        .main-content {
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+        }
+        .top-navbar {
+            background: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .page-container {
+            padding: 25px;
+        }
+        .card {
+            border: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background: #fff;
+            border-bottom: 1px solid #eee;
+            font-weight: 600;
+        }
+        .stat-card {
+            border-radius: 10px;
+            padding: 20px;
+            color: #fff;
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-card.bg-primary { background: linear-gradient(45deg, #3498db, #2980b9); }
+        .stat-card.bg-success { background: linear-gradient(45deg, #27ae60, #229954); }
+        .stat-card.bg-warning { background: linear-gradient(45deg, #f39c12, #d68910); }
+        .stat-card.bg-danger { background: linear-gradient(45deg, #e74c3c, #c0392b); }
+        .stat-card .stat-icon {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 50px;
+            opacity: 0.3;
+        }
+        .stat-card .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .stat-card .stat-label {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        .table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .badge-expired { background: #e74c3c; }
+        .badge-warning { background: #f39c12; }
+        .badge-normal { background: #27ae60; }
+        .btn-action {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+        .alert-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+        }
+        .pagination .page-link {
+            color: #3498db;
+        }
+        .pagination .page-item.active .page-link {
+            background-color: #3498db;
+            border-color: #3498db;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- 侧边栏 -->
+    <nav class="sidebar">
+        <div class="sidebar-brand">
+            <h4><i class="fas fa-pills"></i> 药品销售管理</h4>
+            <small>Pharmacy Management System</small>
+        </div>
+        <ul class="nav flex-column">
+            <li class="nav-section">主面板</li>
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if request.endpoint == 'auth.index' }}" href="{{ url_for('auth.index') }}">
+                    <i class="fas fa-tachometer-alt"></i> 工作台
+                </a>
+            </li>
+            
+            <li class="nav-section">基础信息</li>
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if 'medicine' in request.endpoint }}" href="{{ url_for('medicine.list') }}">
+                    <i class="fas fa-capsules"></i> 药品管理
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if 'supplier' in request.endpoint }}" href="{{ url_for('supplier.list') }}">
+                    <i class="fas fa-truck"></i> 供应商管理
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if 'customer' in request.endpoint }}" href="{{ url_for('customer.list') }}">
+                    <i class="fas fa-users"></i> 客户管理
+                </a>
+            </li>
+            
+            <li class="nav-section">业务操作</li>
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if 'purchase' in request.endpoint }}" href="{{ url_for('purchase.list') }}">
+                    <i class="fas fa-shopping-cart"></i> 进货管理
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if 'sales' in request.endpoint }}" href="{{ url_for('sales.list') }}">
+                    <i class="fas fa-cash-register"></i> 销售管理
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if 'stock' in request.endpoint }}" href="{{ url_for('stock.overview') }}">
+                    <i class="fas fa-warehouse"></i> 库存管理
+                </a>
+            </li>
+            
+            {% if session.get('user_role') in ['Admin', 'Finance'] %}
+            <li class="nav-section">统计报表</li>
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if 'report' in request.endpoint }}" href="{{ url_for('report.index') }}">
+                    <i class="fas fa-chart-bar"></i> 财务报表
+                </a>
+            </li>
+            {% endif %}
+            
+            {% if session.get('user_role') == 'Admin' %}
+            <li class="nav-section">系统设置</li>
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if request.endpoint == 'auth.employee_list' }}" href="{{ url_for('auth.employee_list') }}">
+                    <i class="fas fa-user-cog"></i> 员工管理
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    
+    <!-- 主内容区 -->
+    <div class="main-content">
+        <!-- 顶部导航 -->
+        <div class="top-navbar">
+            <div>
+                <h5 class="mb-0">{% block page_title %}欢迎使用{% endblock %}</h5>
+            </div>
+            <div class="d-flex align-items-center">
+                <span class="me-3">
+                    <i class="fas fa-user-circle"></i> 
+                    {{ session.get('user_name', '未登录') }}
+                    <small class="text-muted">({{ session.get('user_role', '') }})</small>
+                </span>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-sign-out-alt"></i> 退出
+                </a>
+            </div>
+        </div>
+        
+        <!-- 消息提示 -->
+        <div class="alert-container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+        
+        <!-- 页面内容 -->
+        <div class="page-container">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+    
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 自动关闭提示
+        setTimeout(function() {
+            $('.alert').alert('close');
+        }, 5000);
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

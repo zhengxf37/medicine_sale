@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+
+{% block page_title %}工作台{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- 统计卡片 -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stat-card bg-primary">
+            <div class="stat-value">{{ medicine_count }}</div>
+            <div class="stat-label">药品种类</div>
+            <i class="fas fa-capsules stat-icon"></i>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stat-card bg-success">
+            <div class="stat-value">¥{{ "%.2f"|format(today_sales) }}</div>
+            <div class="stat-label">今日销售额</div>
+            <i class="fas fa-chart-line stat-icon"></i>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stat-card bg-warning">
+            <div class="stat-value">{{ low_stock_count }}</div>
+            <div class="stat-label">低库存预警</div>
+            <i class="fas fa-exclamation-triangle stat-icon"></i>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stat-card bg-danger">
+            <div class="stat-value">{{ expiring_count }}</div>
+            <div class="stat-label">临期药品</div>
+            <i class="fas fa-clock stat-icon"></i>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- 快捷操作 -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-bolt"></i> 快捷操作
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <a href="{{ url_for('sales.create') }}" class="btn btn-primary w-100 py-3">
+                            <i class="fas fa-cash-register fa-2x mb-2 d-block"></i>
+                            销售开单
+                        </a>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <a href="{{ url_for('purchase.create') }}" class="btn btn-success w-100 py-3">
+                            <i class="fas fa-shopping-cart fa-2x mb-2 d-block"></i>
+                            进货入库
+                        </a>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <a href="{{ url_for('stock.expiring') }}" class="btn btn-warning w-100 py-3">
+                            <i class="fas fa-clock fa-2x mb-2 d-block"></i>
+                            临期预警
+                        </a>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <a href="{{ url_for('stock.low_stock') }}" class="btn btn-danger w-100 py-3">
+                            <i class="fas fa-box-open fa-2x mb-2 d-block"></i>
+                            缺货查询
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 销售趋势图 -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-chart-area"></i> 近7天销售趋势
+            </div>
+            <div class="card-body">
+                <canvas id="salesChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- 今日概况 -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-calendar-day"></i> 今日概况
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless mb-0">
+                    <tr>
+                        <td><i class="fas fa-arrow-up text-success"></i> 今日销售额</td>
+                        <td class="text-end fw-bold text-success">¥{{ "%.2f"|format(today_sales) }}</td>
+                    </tr>
+                    <tr>
+                        <td><i class="fas fa-arrow-down text-primary"></i> 今日进货额</td>
+                        <td class="text-end fw-bold text-primary">¥{{ "%.2f"|format(today_purchase) }}</td>
+                    </tr>
+                    <tr>
+                        <td><i class="fas fa-pills text-info"></i> 药品种类数</td>
+                        <td class="text-end fw-bold">{{ medicine_count }}</td>
+                    </tr>
+                    <tr>
+                        <td><i class="fas fa-exclamation-circle text-warning"></i> 低库存品种</td>
+                        <td class="text-end fw-bold text-warning">{{ low_stock_count }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 系统信息 -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-info-circle"></i> 系统信息
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless mb-0">
+                    <tr>
+                        <td>系统名称</td>
+                        <td class="text-end">药品销售管理系统</td>
+                    </tr>
+                    <tr>
+                        <td>版本号</td>
+                        <td class="text-end">v1.0.0</td>
+                    </tr>
+                    <tr>
+                        <td>当前用户</td>
+                        <td class="text-end">{{ session.get('user_name') }}</td>
+                    </tr>
+                    <tr>
+                        <td>用户角色</td>
+                        <td class="text-end">
+                            <span class="badge bg-primary">{{ session.get('user_role') }}</span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.bootcdn.net/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script>
+// 加载销售趋势数据
+fetch('{{ url_for("report.api_sales_chart") }}?days=7')
+    .then(response => response.json())
+    .then(data => {
+        const ctx = document.getElementById('salesChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: '销售额',
+                    data: data.values,
+                    borderColor: '#3498db',
+                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '¥' + value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}
