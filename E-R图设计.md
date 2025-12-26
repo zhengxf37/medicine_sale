@@ -1,6 +1,50 @@
-## 1. E-R
+## 1. E-R图
 
-![](assets/ER图.png)
+
+
+### 强实体集
+
+* medicine：包含属性(**med_id**, med_name, spec, category, unit, factory, ref_buy_price, ref_sell_price, total_stock, alert_qty)
+
+* **supplier**：包含属性 (**sup_id**, sup_name, contact_name, phone, address, license_no, status)
+* **employee**：包含属性 (**emp_id**, emp_name, pwd, role, phone)
+* **customer**：包含属性 (**cus_id**, cus_name, gender, phone, age, medical_history, total_consume)
+* **purchase_order**：包含属性 (**po_id**, total_amount, purchase_date)
+* **sales_order**：包含属性 (**so_id**, sale_time, total_price)
+* **stock_batch**：包含属性 (**batch_id,** batch_no, expiry_date, cur_batch_qty, create_time)
+* **inventory_check**：包含属性 (**check_id**, book_qty, actual_qty, diff_qty, diff_amount, emp_id, check_time, remark)
+* **purchase_return**：包含属性 (**pr_id**, batch_no, quantity, return_time, reason)
+* **sales_return**：包含属性 (**sr_id**, batch_no, quantity, return_time, reason)
+* **finance_daily**：包含属性 (**day_id**, sales_revenue, sales_profit, sales_return_amt, purc_return_amt, inv_loss_amt, inv_gain_amt, net_profit)
+
+### 弱实体集
+
+* **purchase_detail**：包含属性 (***pd_id***, batch_no, produce_date, expire_date, quantity, unit_purc_price)
+
+* **sales_detail**：包含属性 (***sd_id***, batch_no, quantity, unit_sell_price)
+
+> 注：pd_id 和 sd_id为分辨符 (Discriminator)。
+
+### 联系集
+
+* **sale**：关联 employee，customer 和 sales_order
+* **purchase**：关联 supplier，employee 和 purchase_order
+* **contain_purc**：关联 purchase_order 和 pruchase_datail
+* **contains_sales**：关联 sales_order 和 sales_datail
+* **purc_med**：关联 pruchase_datail 和 medicine
+* **stock_med**：关联 stock_batch 和 medicine
+* **sales_med**：关联 sales_datail 和 medicine
+* **store**：关联 pruchase_datail 和 stock_batch
+* **consume**：关联 stock_batch 和 sales_datail
+* **check**：关联 stock_batch，employee 和 inventory_check
+* **pur_return**：关联 purchase_order 和 purchase_return
+* **sales_return**：关联 sales_order 和 sales_return
+* **return to**：关联 purchase_return 和 supplier
+* **handle**：关联 employee 和 sales_return
+
+
+
+
 
 ## 2. 数据库表设计
 
