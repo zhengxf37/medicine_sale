@@ -85,16 +85,16 @@
 
 **描述**：记录每一单中具体药品的批次、价格及有效期信息。
 
-| **字段名**          | **数据类型**  | **约束**               | **描述**     |
-| ------------------- | ------------- | ---------------------- | ------------ |
-| **pd_id**           | INT           | PK, Auto_Increment     | 明细唯一ID   |
-| **po_id**           | VARCHAR(20)   | FK -> t_purchase_order | 所属进货单号 |
-| **med_id**          | INT           | FK -> t_medicine       | 药品ID       |
-| **batch_no**        | VARCHAR(30)   | NOT NULL               | 生产批号     |
-| **produce_date**    | DATE          | -                      | 生产日期     |
-| **expiry_date**     | DATE          | NOT NULL               | 有效期至     |
-| **quantity**        | INT           | CHECK > 0              | 入库数量     |
-| **unit_purc_price** | DECIMAL(10,2) | NOT NULL               | 本次进货单价 |
+| **字段名**          | **数据类型**  | **约束**               | **描述**                |
+| ------------------- | ------------- | ---------------------- | ----------------------- |
+| **pd_id**           | INT           | PK, Auto_Increment     | 明细唯一ID              |
+| **po_id**           | VARCHAR(20)   | FK -> t_purchase_order | 所属进货单号            |
+| **med_id**          | INT           | FK -> t_medicine       | 药品ID                  |
+| **batch_no**        | VARCHAR(30)   | NOT NULL               | 生产批号（日期+流水号） |
+| **produce_date**    | DATE          | -                      | 生产日期                |
+| **expiry_date**     | DATE          | NOT NULL               | 有效期至                |
+| **quantity**        | INT           | CHECK > 0              | 入库数量                |
+| **unit_purc_price** | DECIMAL(10,2) | NOT NULL               | 本次进货单价            |
 
 
 
@@ -104,13 +104,13 @@
 
 **描述**：**系统枢纽**，记录每一具体批次药品的实时剩余实物数量。
 
-| **字段名**         | **数据类型** | **约束**           | **描述**           |
-| ------------------ | ------------ | ------------------ | ------------------ |
-| **batch_id**       | INT          | PK, Auto_Increment | 批次ID             |
-| **med_id**         | INT          | FK -> t_medicine   | 药品ID             |
-| **batch_no**       | VARCHAR(30)  | NOT NULL           | 批号               |
-| **expiry_date**    | DATE         | -                  | 有效期             |
-| **cur_batch__qty** | INT          | CHECK >= 0         | 该批次剩余实物数量 |
+| **字段名**         | **数据类型** | **约束**           | **描述**            |
+| ------------------ | ------------ | ------------------ | ------------------- |
+| **batch_id**       | INT          | PK, Auto_Increment | 批次ID              |
+| **med_id**         | INT          | FK -> t_medicine   | 药品ID              |
+| **batch_no**       | VARCHAR(30)  | NOT NULL           | 批号（日期+流水号） |
+| **expiry_date**    | DATE         | -                  | 有效期              |
+| **cur_batch__qty** | INT          | CHECK >= 0         | 该批次剩余实物数量  |
 
 ------
 
@@ -137,6 +137,7 @@
 | **sd_id**           | INT           | PK, Auto_Increment  | 明细唯一ID       |
 | **so_id**           | VARCHAR(20)   | FK -> t_sales_order | 所属销售单号     |
 | **batch_id**        | INT           | FK -> t_stock_batch | 从哪个批次扣的货 |
+| **med_id**          | INT           | FK -> t_medicine    | 药品ID           |
 | **quantity**        | INT           | CHECK > 0           | 销售数量         |
 | **unit_sell_price** | DECIMAL(10,2) | -                   | 交易时单价       |
 
