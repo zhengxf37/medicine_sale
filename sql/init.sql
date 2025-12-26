@@ -167,6 +167,65 @@ CREATE TABLE t_sales_detail (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='销售明细表';
 
 -- ============================================
+-- 五、退货业务表
+-- ============================================
+
+-- 11. 购进退出表 (t_purchase_return)
+DROP TABLE IF EXISTS t_purchase_return;
+CREATE TABLE t_purchase_return (
+    pr_id VARCHAR(20) PRIMARY KEY COMMENT '购进退出单号 (PR+年月日+4位流水号)',
+    po_id VARCHAR(20) NOT NULL COMMENT '关联的原采购订单号',
+    sup_id INT NOT NULL COMMENT '退货的目标供应商',
+    batch_id INT NOT NULL COMMENT '退回批次ID',
+    quantity INT NOT NULL CHECK (quantity > 0) COMMENT '退回数量',
+    return_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '退货时间',
+    reason VARCHAR(200) COMMENT '退货原因',
+    status TINYINT DEFAULT 1 COMMENT '状态 (1:已处理, 0:已撤销)',
+    emp_id INT NOT NULL COMMENT '处理员工工号',
+    FOREIGN KEY (po_id) REFERENCES t_purchase_order(po_id),
+    FOREIGN KEY (sup_id) REFERENCES t_supplier(sup_id),
+    FOREIGN KEY (batch_id) REFERENCES t_stock_batch(batch_id),
+    FOREIGN KEY (emp_id) REFERENCES t_employee(emp_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='购进退出表';
+
+-- 12. 销售退货表 (t_sales_return)
+DROP TABLE IF EXISTS t_sales_return;
+CREATE TABLE t_sales_return (
+    sr_id VARCHAR(20) PRIMARY KEY COMMENT '销售退货单号 (SR+年月日+4位流水号)',
+    so_id VARCHAR(20) NOT NULL COMMENT '关联的原销售订单号',
+    batch_id INT NOT NULL COMMENT '退回批次ID',
+    quantity INT NOT NULL CHECK (quantity > 0) COMMENT '退回数量',
+    return_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '退货时间',
+    reason VARCHAR(200) COMMENT '退货原因',
+    status TINYINT DEFAULT 1 COMMENT '状态 (1:已处理, 0:已撤销)',
+    emp_id INT NOT NULL COMMENT '处理员工工号',
+    FOREIGN KEY (so_id) REFERENCES t_sales_order(so_id),
+    FOREIGN KEY (batch_id) REFERENCES t_stock_batch(batch_id),
+    FOREIGN KEY (emp_id) REFERENCES t_employee(emp_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='销售退货表';
+
+-- ============================================
+-- 六、财务统计表
+-- ============================================
+
+-- 13. 财务日结统计表 (t_finance_daily)
+DROP TABLE IF EXISTS t_finance_daily;
+CREATE TABLE t_finance_daily (
+    day_id DATE PRIMARY KEY COMMENT '统计日期',
+    sales_revenue DECIMAL(12,2) DEFAULT 0.00 COMMENT '当日销售收入',
+    sales_profit DECIMAL(12,2) DEFAULT 0.00 COMMENT '当日销售毛利润',
+    sales_return_amt DECIMAL(12,2) DEFAULT 0.00 COMMENT '当日销售退货金额',
+    purc_return_amt DECIMAL(12,2) DEFAULT 0.00 COMMENT '当日购进退出金额',
+    inv_loss_amt DECIMAL(12,2) DEFAULT 0.00 COMMENT '当日盘点亏损金额',
+    inv_gain_amt DECIMAL(12,2) DEFAULT 0.00 COMMENT '当日盘点盈余金额',
+    net_profit DECIMAL(12,2) GENERATED ALWAYS AS (
+        sales_profit - sales_return_amt + purc_return_amt - inv_loss_amt + inv_gain_amt
+    ) STORED COMMENT '当日净利润',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='财务日结统计表';
+
+-- ============================================
 -- 五、索引设计 (优化查询性能)
 -- ============================================
 
@@ -447,6 +506,50 @@ BEGIN
     END IF;
 END//
 
+-- 触发器6: 购进退出后自动扣减库存
+DROP TRIGGER IF EXISTS trg_after_purchase_return_insert//
+CREATE TRIGGER trg_after_purchase_return_insert
+AFTER INSERT ON t_purchase_return
+FOR EACH ROW
+BEGIN
+    DECLARE v_med_id INT;
+    
+    -- 获取药品ID
+    SELECT med_id INTO v_med_id FROM t_stock_batch WHERE batch_id = NEW.batch_id;
+    
+    -- 扣减批次库存
+    UPDATE t_stock_batch 
+    SET cur_batch_qty = cur_batch_qty - NEW.quantity
+    WHERE batch_id = NEW.batch_id;
+    
+    -- 更新药品总库存
+    UPDATE t_medicine 
+    SET total_stock = total_stock - NEW.quantity
+    WHERE med_id = v_med_id;
+END//
+
+-- 触发器7: 销售退货后自动恢复库存
+DROP TRIGGER IF EXISTS trg_after_sales_return_insert//
+CREATE TRIGGER trg_after_sales_return_insert
+AFTER INSERT ON t_sales_return
+FOR EACH ROW
+BEGIN
+    DECLARE v_med_id INT;
+    
+    -- 获取药品ID
+    SELECT med_id INTO v_med_id FROM t_stock_batch WHERE batch_id = NEW.batch_id;
+    
+    -- 恢复批次库存
+    UPDATE t_stock_batch 
+    SET cur_batch_qty = cur_batch_qty + NEW.quantity
+    WHERE batch_id = NEW.batch_id;
+    
+    -- 更新药品总库存
+    UPDATE t_medicine 
+    SET total_stock = total_stock + NEW.quantity
+    WHERE med_id = v_med_id;
+END//
+
 DELIMITER ;
 
 -- ============================================
@@ -682,6 +785,105 @@ BEGIN
     WHERE cur_batch_qty > 0 
       AND expiry_date > DATE_ADD(CURDATE(), INTERVAL 3 MONTH)
       AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL 6 MONTH);
+END//
+
+-- 存储过程6: 生成购进退出单号
+DROP PROCEDURE IF EXISTS sp_generate_pr_id//
+CREATE PROCEDURE sp_generate_pr_id(OUT p_pr_id VARCHAR(20))
+BEGIN
+    DECLARE v_date_str VARCHAR(8);
+    DECLARE v_seq INT;
+    
+    SET v_date_str = DATE_FORMAT(CURDATE(), '%Y%m%d');
+    
+    SELECT IFNULL(MAX(CAST(RIGHT(pr_id, 4) AS UNSIGNED)), 0) + 1 INTO v_seq
+    FROM t_purchase_return
+    WHERE pr_id LIKE CONCAT('PR', v_date_str, '%');
+    
+    SET p_pr_id = CONCAT('PR', v_date_str, LPAD(v_seq, 4, '0'));
+END//
+
+-- 存储过程7: 生成销售退货单号
+DROP PROCEDURE IF EXISTS sp_generate_sr_id//
+CREATE PROCEDURE sp_generate_sr_id(OUT p_sr_id VARCHAR(20))
+BEGIN
+    DECLARE v_date_str VARCHAR(8);
+    DECLARE v_seq INT;
+    
+    SET v_date_str = DATE_FORMAT(CURDATE(), '%Y%m%d');
+    
+    SELECT IFNULL(MAX(CAST(RIGHT(sr_id, 4) AS UNSIGNED)), 0) + 1 INTO v_seq
+    FROM t_sales_return
+    WHERE sr_id LIKE CONCAT('SR', v_date_str, '%');
+    
+    SET p_sr_id = CONCAT('SR', v_date_str, LPAD(v_seq, 4, '0'));
+END//
+
+-- 存储过程8: 财务日结统计
+DROP PROCEDURE IF EXISTS sp_daily_finance_settlement//
+CREATE PROCEDURE sp_daily_finance_settlement(IN p_date DATE)
+BEGIN
+    DECLARE v_sales_revenue DECIMAL(12,2) DEFAULT 0.00;
+    DECLARE v_sales_cost DECIMAL(12,2) DEFAULT 0.00;
+    DECLARE v_sales_profit DECIMAL(12,2) DEFAULT 0.00;
+    DECLARE v_sales_return_amt DECIMAL(12,2) DEFAULT 0.00;
+    DECLARE v_purc_return_amt DECIMAL(12,2) DEFAULT 0.00;
+    DECLARE v_inv_loss_amt DECIMAL(12,2) DEFAULT 0.00;
+    DECLARE v_inv_gain_amt DECIMAL(12,2) DEFAULT 0.00;
+    
+    -- 计算当日销售收入和成本
+    SELECT 
+        IFNULL(SUM(sd.quantity * sd.unit_sell_price), 0),
+        IFNULL(SUM(sd.quantity * sb.unit_cost), 0)
+    INTO v_sales_revenue, v_sales_cost
+    FROM t_sales_order so
+    JOIN t_sales_detail sd ON so.so_id = sd.so_id
+    JOIN t_stock_batch sb ON sd.batch_id = sb.batch_id
+    WHERE so.status = 1
+      AND DATE(so.sale_time) = p_date;
+    
+    SET v_sales_profit = v_sales_revenue - v_sales_cost;
+    
+    -- 计算当日销售退货金额
+    SELECT IFNULL(SUM(sr.quantity * sb.unit_cost), 0)
+    INTO v_sales_return_amt
+    FROM t_sales_return sr
+    JOIN t_stock_batch sb ON sr.batch_id = sb.batch_id
+    WHERE sr.status = 1
+      AND DATE(sr.return_time) = p_date;
+    
+    -- 计算当日购进退出金额
+    SELECT IFNULL(SUM(pr.quantity * sb.unit_cost), 0)
+    INTO v_purc_return_amt
+    FROM t_purchase_return pr
+    JOIN t_stock_batch sb ON pr.batch_id = sb.batch_id
+    WHERE pr.status = 1
+      AND DATE(pr.return_time) = p_date;
+    
+    -- 计算当日盘点盈亏
+    SELECT 
+        IFNULL(SUM(CASE WHEN diff_amount < 0 THEN ABS(diff_amount) ELSE 0 END), 0),
+        IFNULL(SUM(CASE WHEN diff_amount > 0 THEN diff_amount ELSE 0 END), 0)
+    INTO v_inv_loss_amt, v_inv_gain_amt
+    FROM t_inventory_check
+    WHERE DATE(check_time) = p_date;
+    
+    -- 插入或更新财务日结表
+    INSERT INTO t_finance_daily (
+        day_id, sales_revenue, sales_profit, sales_return_amt, 
+        purc_return_amt, inv_loss_amt, inv_gain_amt
+    ) VALUES (
+        p_date, v_sales_revenue, v_sales_profit, v_sales_return_amt,
+        v_purc_return_amt, v_inv_loss_amt, v_inv_gain_amt
+    )
+    ON DUPLICATE KEY UPDATE
+        sales_revenue = v_sales_revenue,
+        sales_profit = v_sales_profit,
+        sales_return_amt = v_sales_return_amt,
+        purc_return_amt = v_purc_return_amt,
+        inv_loss_amt = v_inv_loss_amt,
+        inv_gain_amt = v_inv_gain_amt,
+        updated_at = CURRENT_TIMESTAMP;
 END//
 
 DELIMITER ;

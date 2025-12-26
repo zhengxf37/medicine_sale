@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}销售退货列表{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-exchange-alt"></i> 销售退货管理</h2>
+    <a href="{{ url_for('return_manage.create_sales_return') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> 新建退货单
+    </a>
+</div>
+
+<!-- 搜索表单 -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-8">
+                <input type="text" name="keyword" class="form-control" 
+                       placeholder="搜索退货单号、销售单号、退货原因" value="{{ keyword }}">
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="fas fa-search"></i> 搜索
+                </button>
+                <a href="{{ url_for('return_manage.sales_return_list') }}" class="btn btn-secondary">
+                    <i class="fas fa-redo"></i> 重置
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 退货列表 -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>退货单号</th>
+                        <th>销售单号</th>
+                        <th>客户</th>
+                        <th>药品</th>
+                        <th>批号</th>
+                        <th>退货数量</th>
+                        <th>退货原因</th>
+                        <th>处理人</th>
+                        <th>退货时间</th>
+                        <th>状态</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ret in returns %}
+                    <tr>
+                        <td><strong>{{ ret.sr_id }}</strong></td>
+                        <td>{{ ret.so_id }}</td>
+                        <td>{{ ret.sales_order.customer.cus_name if ret.sales_order.customer else '散客' }}</td>
+                        <td>{{ ret.stock_batch.medicine.med_name }}</td>
+                        <td>{{ ret.stock_batch.batch_no }}</td>
+                        <td><span class="badge bg-info">{{ ret.quantity }}</span></td>
+                        <td>{{ ret.reason or '-' }}</td>
+                        <td>{{ ret.employee.emp_name }}</td>
+                        <td>{{ ret.return_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            {% if ret.status == 1 %}
+                            <span class="badge bg-success">已处理</span>
+                            {% else %}
+                            <span class="badge bg-secondary">已撤销</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="10" class="text-center text-muted">暂无数据</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 分页 -->
+        {% if pagination.pages > 1 %}
+        <nav>
+            <ul class="pagination justify-content-center">
+                <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                    <a class="page-link" href="?page={{ pagination.prev_num }}&keyword={{ keyword }}">上一页</a>
+                </li>
+                {% for p in pagination.iter_pages() %}
+                    {% if p %}
+                    <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                        <a class="page-link" href="?page={{ p }}&keyword={{ keyword }}">{{ p }}</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                {% endfor %}
+                <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                    <a class="page-link" href="?page={{ pagination.next_num }}&keyword={{ keyword }}">下一页</a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

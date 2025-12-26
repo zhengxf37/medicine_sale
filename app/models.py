@@ -3,10 +3,11 @@
 对应 E-R 图设计中的所有表
 """
 from datetime import datetime
+from flask_login import UserMixin
 from app import db
 
 
-class Employee(db.Model):
+class Employee(UserMixin, db.Model):
     """员工表"""
     __tablename__ = 't_employee'
     
@@ -25,6 +26,22 @@ class Employee(db.Model):
     
     def __repr__(self):
         return f'<Employee {self.emp_name}>'
+    
+    # Flask-Login 所需方法
+    def get_id(self):
+        return str(self.emp_id)
+    
+    @property
+    def is_authenticated(self):
+        return True
+    
+    @property
+    def is_active(self):
+        return self.status == 1
+    
+    @property
+    def is_anonymous(self):
+        return False
     
     @property
     def role_name(self):
@@ -250,3 +267,82 @@ class InventoryCheck(db.Model):
     def diff_qty(self):
         """差异数量"""
         return self.actual_qty - self.book_qty
+
+
+class PurchaseReturn(db.Model):
+    """购进退出表"""
+    __tablename__ = 't_purchase_return'
+    
+    pr_id = db.Column(db.String(20), primary_key=True, comment='退货单号')
+    po_id = db.Column(db.String(20), db.ForeignKey('t_purchase_order.po_id'), nullable=False)
+    sup_id = db.Column(db.Integer, db.ForeignKey('t_supplier.sup_id'), nullable=False)
+    batch_id = db.Column(db.Integer, db.ForeignKey('t_stock_batch.batch_id'), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False, comment='退回数量')
+    return_time = db.Column(db.DateTime, default=datetime.now, comment='退货时间')
+    reason = db.Column(db.String(200), comment='退货原因')
+    status = db.Column(db.SmallInteger, default=1, comment='状态')
+    emp_id = db.Column(db.Integer, db.ForeignKey('t_employee.emp_id'), nullable=False)
+    
+    # 关系
+    purchase_order = db.relationship('PurchaseOrder', backref='returns')
+    supplier = db.relationship('Supplier', backref='purchase_returns')
+    stock_batch = db.relationship('StockBatch', backref='purchase_returns')
+    employee = db.relationship('Employee', backref='purchase_returns')
+    
+    def __repr__(self):
+        return f'<PurchaseReturn {self.pr_id}>'
+    
+    @property
+    def status_text(self):
+        return '已处理' if self.status == 1 else '已撤销'
+
+
+class SalesReturn(db.Model):
+    """销售退货表"""
+    __tablename__ = 't_sales_return'
+    
+    sr_id = db.Column(db.String(20), primary_key=True, comment='退货单号')
+    so_id = db.Column(db.String(20), db.ForeignKey('t_sales_order.so_id'), nullable=False)
+    batch_id = db.Column(db.Integer, db.ForeignKey('t_stock_batch.batch_id'), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False, comment='退回数量')
+    return_time = db.Column(db.DateTime, default=datetime.now, comment='退货时间')
+    reason = db.Column(db.String(200), comment='退货原因')
+    status = db.Column(db.SmallInteger, default=1, comment='状态')
+    emp_id = db.Column(db.Integer, db.ForeignKey('t_employee.emp_id'), nullable=False)
+    
+    # 关系
+    sales_order = db.relationship('SalesOrder', backref='returns')
+    stock_batch = db.relationship('StockBatch', backref='sales_returns')
+    employee = db.relationship('Employee', backref='sales_returns')
+    
+    def __repr__(self):
+        return f'<SalesReturn {self.sr_id}>'
+    
+    @property
+    def status_text(self):
+        return '已处理' if self.status == 1 else '已撤销'
+
+
+class FinanceDaily(db.Model):
+    """财务日结统计表"""
+    __tablename__ = 't_finance_daily'
+    
+    day_id = db.Column(db.Date, primary_key=True, comment='统计日期')
+    sales_revenue = db.Column(db.Numeric(12, 2), default=0.00, comment='销售收入')
+    sales_profit = db.Column(db.Numeric(12, 2), default=0.00, comment='销售毛利润')
+    sales_return_amt = db.Column(db.Numeric(12, 2), default=0.00, comment='销售退货金额')
+    purc_return_amt = db.Column(db.Numeric(12, 2), default=0.00, comment='购进退出金额')
+    inv_loss_amt = db.Column(db.Numeric(12, 2), default=0.00, comment='盘点亏损金额')
+    inv_gain_amt = db.Column(db.Numeric(12, 2), default=0.00, comment='盘点盈余金额')
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    
+    def __repr__(self):
+        return f'<FinanceDaily {self.day_id}>'
+    
+    @property
+    def net_profit(self):
+        """净利润"""
+        return (float(self.sales_profit or 0) - float(self.sales_return_amt or 0) + 
+                float(self.purc_return_amt or 0) - float(self.inv_loss_amt or 0) + 
+                float(self.inv_gain_amt or 0))

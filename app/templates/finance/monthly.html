@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}月度财务报表{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-calendar-alt"></i> 月度财务报表</h2>
+    <div>
+        <a href="{{ url_for('finance.daily_report') }}" class="btn btn-secondary">
+            <i class="fas fa-calendar-day"></i> 日结报表
+        </a>
+        <a href="{{ url_for('finance.annual_report') }}" class="btn btn-info">
+            <i class="fas fa-calendar"></i> 年度报表
+        </a>
+    </div>
+</div>
+
+<!-- 月份选择 -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <select name="year" class="form-select">
+                    {% for y in range(2023, 2026) %}
+                    <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}年</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="month" class="form-select">
+                    {% for m in range(1, 13) %}
+                    <option value="{{ m }}" {% if m == month %}selected{% endif %}>{{ m }}月</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary">查询</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 月度汇总 -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h6>月度销售收入</h6>
+                <h3>{{ monthly_data.total_revenue|currency }}</h3>
+                <small>统计天数：{{ monthly_data.days_count }} 天</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h6>月度毛利润</h6>
+                <h3>{{ monthly_data.total_profit|currency }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <h6>月度净利润</h6>
+                <h3>{{ net_profit|currency }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 详细统计 -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">收入明细</div>
+            <div class="card-body">
+                <table class="table">
+                    <tr>
+                        <td>销售收入</td>
+                        <td class="text-end"><strong>{{ monthly_data.total_revenue|currency }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td>购进退出收入</td>
+                        <td class="text-end text-success">{{ monthly_data.total_purc_return|currency }}</td>
+                    </tr>
+                    <tr>
+                        <td>盘点盈余</td>
+                        <td class="text-end text-success">{{ monthly_data.total_inv_gain|currency }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">支出明细</div>
+            <div class="card-body">
+                <table class="table">
+                    <tr>
+                        <td>销售成本</td>
+                        <td class="text-end"><strong>{{ (monthly_data.total_revenue - monthly_data.total_profit)|currency }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td>销售退货</td>
+                        <td class="text-end text-danger">{{ monthly_data.total_sales_return|currency }}</td>
+                    </tr>
+                    <tr>
+                        <td>盘点亏损</td>
+                        <td class="text-end text-danger">{{ monthly_data.total_inv_loss|currency }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 日度趋势图 -->
+<div class="card mt-4">
+    <div class="card-header">日度销售趋势</div>
+    <div class="card-body">
+        <canvas id="dailyTrendChart" height="80"></canvas>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const ctx = document.getElementById('dailyTrendChart');
+new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: [{% for d in daily_trend %}'{{ d.day_id }}'{% if not loop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            label: '销售收入',
+            data: [{% for d in daily_trend %}{{ d.sales_revenue or 0 }}{% if not loop.last %},{% endif %}{% endfor %}],
+            borderColor: 'rgb(52, 152, 219)',
+            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+            tension: 0.1
+        }, {
+            label: '净利润',
+            data: [{% for d in daily_trend %}{{ d.net_profit }}{% if not loop.last %},{% endif %}{% endfor %}],
+            borderColor: 'rgb(39, 174, 96)',
+            backgroundColor: 'rgba(39, 174, 96, 0.1)',
+            tension: 0.1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: {
+                position: 'top',
+            },
+            title: {
+                display: false
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

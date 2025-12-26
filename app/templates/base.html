@@ -191,17 +191,27 @@
                     <i class="fas fa-warehouse"></i> 库存管理
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if 'return_manage' in request.endpoint }}" href="{{ url_for('return_manage.purchase_return_list') }}">
+                    <i class="fas fa-undo"></i> 退货管理
+                </a>
+            </li>
             
-            {% if session.get('user_role') in ['Admin', 'Finance'] %}
+            {% if current_user.is_authenticated and current_user.role in ['Admin', 'Finance'] %}
             <li class="nav-section">统计报表</li>
             <li class="nav-item">
                 <a class="nav-link {{ 'active' if 'report' in request.endpoint }}" href="{{ url_for('report.index') }}">
-                    <i class="fas fa-chart-bar"></i> 财务报表
+                    <i class="fas fa-chart-bar"></i> 经营报表
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if 'finance' in request.endpoint }}" href="{{ url_for('finance.daily_report') }}">
+                    <i class="fas fa-chart-line"></i> 财务报表
                 </a>
             </li>
             {% endif %}
             
-            {% if session.get('user_role') == 'Admin' %}
+            {% if current_user.is_authenticated and current_user.role == 'Admin' %}
             <li class="nav-section">系统设置</li>
             <li class="nav-item">
                 <a class="nav-link {{ 'active' if request.endpoint == 'auth.employee_list' }}" href="{{ url_for('auth.employee_list') }}">
@@ -222,8 +232,8 @@
             <div class="d-flex align-items-center">
                 <span class="me-3">
                     <i class="fas fa-user-circle"></i> 
-                    {{ session.get('user_name', '未登录') }}
-                    <small class="text-muted">({{ session.get('user_role', '') }})</small>
+                    {{ current_user.emp_name if current_user.is_authenticated else '未登录' }}
+                    <small class="text-muted">({{ current_user.role_name if current_user.is_authenticated else '' }})</small>
                 </span>
                 <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-secondary btn-sm">
                     <i class="fas fa-sign-out-alt"></i> 退出

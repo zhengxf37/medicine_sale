@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}财务日结报表{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-chart-line"></i> 财务日结报表</h2>
+    <div>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#settlementModal">
+            <i class="fas fa-calculator"></i> 执行日结
+        </button>
+    </div>
+</div>
+
+<!-- 月份选择 -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <select name="year" class="form-select">
+                    {% for y in range(2023, 2026) %}
+                    <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}年</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="month" class="form-select">
+                    {% for m in range(1, 13) %}
+                    <option value="{{ m }}" {% if m == month %}selected{% endif %}>{{ m }}月</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary">查询</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 月度汇总 -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h6>月度销售收入</h6>
+                <h3>{{ month_sum.total_revenue|currency }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h6>月度毛利润</h6>
+                <h3>{{ month_sum.total_profit|currency }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <h6>月度退货金额</h6>
+                <h3>{{ (month_sum.total_sales_return + month_sum.total_purc_return)|currency }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <h6>月度盘点盈亏</h6>
+                <h3>{{ (month_sum.total_inv_gain - month_sum.total_inv_loss)|currency }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 日结明细 -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>日期</th>
+                        <th>销售收入</th>
+                        <th>毛利润</th>
+                        <th>销售退货</th>
+                        <th>购进退出</th>
+                        <th>盘点亏损</th>
+                        <th>盘点盈余</th>
+                        <th>净利润</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <td><strong>{{ record.day_id }}</strong></td>
+                        <td>{{ record.sales_revenue|currency }}</td>
+                        <td class="text-success">{{ record.sales_profit|currency }}</td>
+                        <td class="text-danger">{{ record.sales_return_amt|currency }}</td>
+                        <td class="text-info">{{ record.purc_return_amt|currency }}</td>
+                        <td class="text-danger">{{ record.inv_loss_amt|currency }}</td>
+                        <td class="text-success">{{ record.inv_gain_amt|currency }}</td>
+                        <td><strong>{{ record.net_profit|currency }}</strong></td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted">暂无数据</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 日结模态框 -->
+<div class="modal fade" id="settlementModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">执行日结统计</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('finance.daily_settlement') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">结算日期</label>
+                        <input type="date" name="settle_date" class="form-control" 
+                               value="{{ today }}" required>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> 
+                        系统将自动统计指定日期的销售、退货和盘点数据，生成财务日结报表。
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">确认执行</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}年度财务报表{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-calendar"></i> 年度财务报表</h2>
+    <div>
+        <a href="{{ url_for('finance.daily_report') }}" class="btn btn-secondary">
+            <i class="fas fa-calendar-day"></i> 日结报表
+        </a>
+        <a href="{{ url_for('finance.monthly_report') }}" class="btn btn-info">
+            <i class="fas fa-calendar-alt"></i> 月度报表
+        </a>
+    </div>
+</div>
+
+<!-- 年份选择 -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <select name="year" class="form-select">
+                    {% for y in range(2023, 2026) %}
+                    <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}年</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary">查询</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 年度汇总 -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white text-center p-4">
+            <h6>年度销售收入</h6>
+            <h2>{{ annual_sum.total_revenue|currency }}</h2>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white text-center p-4">
+            <h6>年度毛利润</h6>
+            <h2>{{ annual_sum.total_profit|currency }}</h2>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white text-center p-4">
+            <h6>年度净利润</h6>
+            <h2>{{ annual_net_profit|currency }}</h2>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white text-center p-4">
+            <h6>利润率</h6>
+            <h2>{% if annual_sum.total_revenue and annual_sum.total_revenue > 0 %}{{ "%.1f"|format((annual_net_profit / annual_sum.total_revenue * 100)) }}%{% else %}0%{% endif %}</h2>
+        </div>
+    </div>
+</div>
+
+<!-- 月度统计表 -->
+<div class="card mb-4">
+    <div class="card-header">月度明细统计</div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>月份</th>
+                        <th>销售收入</th>
+                        <th>毛利润</th>
+                        <th>销售退货</th>
+                        <th>购进退出</th>
+                        <th>盘点盈亏</th>
+                        <th>净利润</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in monthly_stats %}
+                    {% set net = (stat.profit or 0) - (stat.sales_return or 0) + (stat.purc_return or 0) - (stat.inv_loss or 0) + (stat.inv_gain or 0) %}
+                    <tr>
+                        <td><strong>{{ stat.month }}月</strong></td>
+                        <td>{{ stat.revenue|currency }}</td>
+                        <td class="text-success">{{ stat.profit|currency }}</td>
+                        <td class="text-danger">{{ stat.sales_return|currency }}</td>
+                        <td class="text-info">{{ stat.purc_return|currency }}</td>
+                        <td>{{ (stat.inv_gain - stat.inv_loss)|currency }}</td>
+                        <td><strong>{{ net|currency }}</strong></td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">暂无数据</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 月度趋势图 -->
+<div class="card">
+    <div class="card-header">月度销售趋势</div>
+    <div class="card-body">
+        <canvas id="monthlyTrendChart" height="80"></canvas>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const ctx = document.getElementById('monthlyTrendChart');
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: [{% for s in monthly_stats %}'{{ s.month }}月'{% if not loop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            label: '销售收入',
+            data: [{% for s in monthly_stats %}{{ s.revenue or 0 }}{% if not loop.last %},{% endif %}{% endfor %}],
+            backgroundColor: 'rgba(52, 152, 219, 0.7)',
+            borderColor: 'rgb(52, 152, 219)',
+            borderWidth: 1
+        }, {
+            label: '毛利润',
+            data: [{% for s in monthly_stats %}{{ s.profit or 0 }}{% if not loop.last %},{% endif %}{% endfor %}],
+            backgroundColor: 'rgba(39, 174, 96, 0.7)',
+            borderColor: 'rgb(39, 174, 96)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: {
+                position: 'top',
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

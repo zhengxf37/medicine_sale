@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}创建购进退货单{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-undo"></i> 创建购进退货单</h2>
+    <a href="{{ url_for('return_manage.purchase_return_list') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> 返回列表
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST" id="returnForm">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">采购单号 <span class="text-danger">*</span></label>
+                    <select name="po_id" id="po_id" class="form-select" required>
+                        <option value="">请选择采购单</option>
+                        {% for po in purchase_orders %}
+                        <option value="{{ po.po_id }}">
+                            {{ po.po_id }} - {{ po.supplier.sup_name }} - {{ po.purchase_date.strftime('%Y-%m-%d') }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">选择批次 <span class="text-danger">*</span></label>
+                    <select name="batch_id" id="batch_id" class="form-select" required disabled>
+                        <option value="">请先选择采购单</option>
+                    </select>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">退货数量 <span class="text-danger">*</span></label>
+                    <input type="number" name="quantity" id="quantity" class="form-control" 
+                           min="1" required>
+                    <small class="text-muted">当前库存：<span id="cur_qty">-</span></small>
+                </div>
+
+                <div class="col-md-12 mb-3">
+                    <label class="form-label">退货原因</label>
+                    <textarea name="reason" class="form-control" rows="3" 
+                              placeholder="请输入退货原因（如质量问题、过期等）"></textarea>
+                </div>
+            </div>
+
+            <div class="text-end">
+                <button type="reset" class="btn btn-secondary">重置</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-check"></i> 提交退货单
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.getElementById('po_id').addEventListener('change', function() {
+    const poId = this.value;
+    const batchSelect = document.getElementById('batch_id');
+    
+    if (!poId) {
+        batchSelect.disabled = true;
+        batchSelect.innerHTML = '<option value="">请先选择采购单</option>';
+        return;
+    }
+    
+    // 获取采购单关联的批次
+    fetch(`/return/api/order_batches/${poId}`)
+        .then(response => response.json())
+        .then(batches => {
+            batchSelect.innerHTML = '<option value="">请选择批次</option>';
+            batches.forEach(batch => {
+                const option = document.createElement('option');
+                option.value = batch.batch_id;
+                option.textContent = `${batch.med_name} - ${batch.batch_no} (库存:${batch.cur_qty})`;
+                option.dataset.curQty = batch.cur_qty;
+                batchSelect.appendChild(option);
+            });
+            batchSelect.disabled = false;
+        })
+        .catch(err => {
+            alert('获取批次信息失败');
+            console.error(err);
+        });
+});
+
+document.getElementById('batch_id').addEventListener('change', function() {
+    const selected = this.options[this.selectedIndex];
+    const curQty = selected.dataset.curQty || 0;
+    document.getElementById('cur_qty').textContent = curQty;
+    document.getElementById('quantity').max = curQty;
+});
+</script>
+{% endblock %}
