@@ -1,6 +1,6 @@
 ## 1. E-R图
 
-![](assets/ER图.png)
+《ER图放这里》
 
 ### 强实体集
 
@@ -13,8 +13,8 @@
 * **sales_order**：包含属性 (**so_id**, sale_time, total_price)
 * **stock_batch**：包含属性 (**batch_id,** batch_no, expiry_date, cur_batch_qty, create_time)
 * **inventory_check**：包含属性 (**check_id**, book_qty, actual_qty, diff_qty, diff_amount, emp_id, check_time, remark)
-* **purchase_return**：包含属性 (**pr_id**, batch_no, quantity, return_time, reason)
-* **sales_return**：包含属性 (**sr_id**, batch_no, quantity, return_time, reason)
+* **purchase_return**：包含属性 (**pr_id**, quantity, return_time, reason)
+* **sales_return**：包含属性 (**sr_id**, quantity, return_time, reason)
 * **finance_daily**：包含属性 (**day_id**, sales_revenue, sales_profit, sales_return_amt, purc_return_amt, inv_loss_amt, inv_gain_amt, net_profit)
 
 ### 弱实体集
@@ -41,6 +41,8 @@
 * **sales_return**：关联 sales_order 和 sales_return
 * **return to**：关联 purchase_return 和 supplier
 * **handle**：关联 employee 和 sales_return
+* **pr_stock**：关联purchase_return和stock_batch
+* **sr_stock**：关联sales_return和stock_batch
 
 
 
@@ -199,12 +201,33 @@
 | **batch_no**       | VARCHAR(30)  | NOT NULL           | 批号（日期+流水号） |
 | **expiry_date**    | DATE         | -                  | 有效期              |
 | **cur_batch__qty** | INT          | CHECK >= 0         | 该批次剩余实物数量  |
+| **create_time**    | DATE         |                    | 创建该批库存的时间  |
 
-------
+> 这里有med_id , batch_no  --> batch_id的函数依赖
 
-### 四、 销售与财务类表
+#### 表8：库存盘点记录表 (t_inventory_check)
 
-#### 表8：销售单主表 (t_sales_order)
+**描述**：记录员工对库存批次进行实物核对的结果，用于发现并调整账实差异。
+
+| **字段名**      | **数据类型**  | **约束**            | **描述**                 |
+| --------------- | ------------- | ------------------- | ------------------------ |
+| **check_id**    | INT           | PK                  | 盘点记录唯一ID           |
+| **batch_id**    | INT           | FK -> t_stock_batch | 关联被盘点的库存批次     |
+| **emp_id**      | INT           | FK -> t_employee    | 执行盘点的员工工号       |
+| **book_qty**    | INT           | -                   | 盘点时的系统账面数量     |
+| **actual_qty**  | INT           | -                   | 仓库实地清点的实物数量   |
+| **diff_qty**    | INT           | GENERATED           | 差异数量 (实物 - 账面)   |
+| **diff_amount** | DECIMAL(12,2) | -                   | 盈亏金额                 |
+| **check_time**  | DATETIME      | DEFAULT NOW()       | 盘点操作执行的时间       |
+| **remark**      | VARCHAR(200)  | -                   | 盘点备注（如破损说明等） |
+
+***
+
+
+
+### 四、 销售表
+
+#### 表9：销售单主表 (t_sales_order)
 
 **描述**：记录每一笔面向客户的交易概况。
 
@@ -216,7 +239,7 @@
 | **sale_time**   | DATETIME      | DEFAULT NOW()    | 交易时间                    |
 | **total_price** | DECIMAL(12,2) | -                | 销售总额                    |
 
-#### 表9：销售明细表 (t_sales_detail)
+#### 表10：销售明细表 (t_sales_detail)
 
 **描述**：记录交易的具体药品及扣减的批次信息，用于售后追溯。
 
@@ -229,3 +252,51 @@
 | **quantity**        | INT           | CHECK > 0           | 销售数量         |
 | **unit_sell_price** | DECIMAL(10,2) | -                   | 交易时单价       |
 
+### 五、退货表
+
+#### 表11：购进退出表 (t_purchase_return)
+
+**描述**：记录因质量或过期等原因将药品退回给供应商的业务，关联原采购单。
+
+| **字段名**      | **数据类型** | **约束**               | **描述**                    |
+| --------------- | ------------ | ---------------------- | --------------------------- |
+| **pr_id**       | VARCHAR(20)  | PK                     | 购进退出单号 (如 PR2025...) |
+| **po_id**       | VARCHAR(20)  | FK -> t_purchase_order | 关联的原采购订单号          |
+| **sup_id**      | INT          | FK -> t_supplier       | 退货的目标供应商            |
+| **batch_id**    | VARCHAR(30)  | -                      | 退回药品的生产批号          |
+| **quantity**    | INT          | -                      | 退回给供应商的数量          |
+| **return_time** | DATETIME     | DEFAULT NOW()          | 退货执行的时间              |
+| **reason**      | VARCHAR(200) | -                      | 退货原因说明                |
+
+#### 表12：销售退货表 (t_sales_return)
+
+**描述**：记录客户退回药品的业务，需追溯原销售单以确保存储和金额准确。
+
+| **字段名**      | **数据类型** | **约束**            | **描述**                    |
+| --------------- | ------------ | ------------------- | --------------------------- |
+| **sr_id**       | VARCHAR(20)  | PK                  | 销售退货单号 (如 SR2025...) |
+| **so_id**       | VARCHAR(20)  | FK -> t_sales_order | 关联的原销售订单号          |
+| **emp_id**      | INT          | FK -> t_employee    | 处理退货申请的员工工号      |
+| **batch_id**    | VARCHAR(30)  | -                   | 客户退回药品的生产批号      |
+| **quantity**    | INT          | -                   | 客户实际退回的数量          |
+| **return_time** | DATETIME     | DEFAULT NOW()       | 客户退货的时间              |
+| **reason**      | VARCHAR(200) | -                   | 客户退货的原因              |
+
+
+
+### 六、财务统计表
+
+#### 表13：财务日结统计表 (t_finance_daily)
+
+**描述**：汇总每日的销售、退货及盘点盈亏数据，用于生成财务统计报表。
+
+| **字段名**           | **数据类型**  | **约束** | **描述**                     |
+| -------------------- | ------------- | -------- | ---------------------------- |
+| **day_id**           | DATE          | PK       | 统计日期（主键）             |
+| **sales_revenue**    | DECIMAL(12,2) | -        | 当日总销售收入               |
+| **sales_profit**     | DECIMAL(12,2) | -        | 当日销售毛利润               |
+| **sales_return_amt** | DECIMAL(12,2) | -        | 当日销售退货支出的总金额     |
+| **purc_return_amt**  | DECIMAL(12,2) | -        | 当日购进退出收回的总金额     |
+| **inv_loss_amt**     | DECIMAL(12,2) | -        | 当日因盘点亏损造成的损失金额 |
+| **inv_gain_amt**     | DECIMAL(12,2) | -        | 当日因盘点盈余增加的资产金额 |
+| **net_profit**       | DECIMAL(12,2) | -        | 当日最终净利润               |
