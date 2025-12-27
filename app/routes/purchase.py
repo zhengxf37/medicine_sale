@@ -112,10 +112,20 @@ def create():
             return jsonify({'success': False, 'message': f'创建失败: {str(e)}'})
     
     suppliers = Supplier.query.filter_by(status=1).all()
+    # medicines = Medicine.query.all()
+    # return render_template('purchase/create.html', 
+    #                       suppliers=suppliers, 
+    #                       medicines=medicines)
     medicines = Medicine.query.all()
+    medicines_data = [{
+        'med_id': m.med_id,
+        'med_name': m.med_name,
+        'spec': m.spec,
+        'ref_buy_price': float(m.ref_buy_price or 0)
+    } for m in medicines]
     return render_template('purchase/create.html', 
-                          suppliers=suppliers, 
-                          medicines=medicines)
+                        suppliers=suppliers, 
+                        medicines=medicines_data)
 
 
 @purchase_bp.route('/detail/<po_id>')
