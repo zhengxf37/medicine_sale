@@ -4,7 +4,12 @@
 
 {% block content %}
 <div class="card">
-    <div class="card-header"><i class="fas fa-chart-line"></i> 销售报表</div>
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-chart-line"></i> 销售报表</span>
+        <a href="{{ url_for('report.index') }}" class="btn btn-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> 返回
+        </a>
+    </div>
     <div class="card-body">
         <form method="GET" class="row g-3 mb-4">
             <div class="col-md-2">

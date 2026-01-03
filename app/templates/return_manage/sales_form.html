@@ -18,9 +18,9 @@
                     <label class="form-label">销售单号 <span class="text-danger">*</span></label>
                     <select name="so_id" id="so_id" class="form-select" required>
                         <option value="">请选择销售单</option>
-                        {% for so in sales_orders %}
-                        <option value="{{ so.so_id }}">
-                            {{ so.so_id }} - {{ so.customer.cus_name if so.customer else '散客' }} - {{ so.sale_time.strftime('%Y-%m-%d') }}
+                        {% for order in sales_orders %}
+                        <option value="{{ order.so_id }}" data-customer="{{ order.cus_id }}">
+                            {{ order.so_id }} - {{ order.customer.cus_name }} ({{ order.sale_time.strftime('%Y-%m-%d') }})
                         </option>
                         {% endfor %}
                     </select>
@@ -83,13 +83,18 @@ document.getElementById('so_id').addEventListener('change', function() {
         .then(response => response.json())
         .then(batches => {
             batchSelect.innerHTML = '<option value="">请选择批次</option>';
-            batches.forEach(batch => {
-                const option = document.createElement('option');
-                option.value = batch.batch_id;
-                option.textContent = `${batch.med_name} - ${batch.batch_no}`;
-                batchSelect.appendChild(option);
-            });
-            batchSelect.disabled = false;
+            if (batches.length > 0) {
+                batches.forEach(batch => {
+                    const option = document.createElement('option');
+                    option.value = batch.batch_id;
+                    option.textContent = `${batch.med_name} - ${batch.batch_no} (剩余: ${batch.cur_qty})`;
+                    batchSelect.appendChild(option);
+                });
+                batchSelect.disabled = false;
+            } else {
+                batchSelect.innerHTML = '<option value="">该订单无关联批次信息</option>';
+                batchSelect.disabled = true;
+            }
         })
         .catch(err => {
             alert('获取批次信息失败');

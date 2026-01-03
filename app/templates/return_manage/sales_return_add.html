@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block page_title %}新增销售退货{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header">退货信息确认 - 销售单号: {{ sale.sale_id }}</div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="mb-3">
+                <label class="form-label">客户</label>
+                <input type="text" class="form-control" value="{{ sale.customer.cus_name }}" readonly>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">退款总额</label>
+                <input type="text" class="form-control" value="{{ sale.total_amount | currency }}" readonly>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">退货原因</label>
+                <textarea name="reason" class="form-control" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-danger">确认退货并入库</button>
+            <a href="{{ url_for('sales.list') }}" class="btn btn-secondary">取消</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

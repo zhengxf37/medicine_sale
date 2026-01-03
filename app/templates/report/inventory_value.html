@@ -4,7 +4,12 @@
 
 {% block content %}
 <div class="card">
-    <div class="card-header"><i class="fas fa-warehouse"></i> 库存资产评估</div>
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-warehouse"></i> 库存资产评估</span>
+        <a href="{{ url_for('report.index') }}" class="btn btn-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> 返回
+        </a>
+    </div>
     <div class="card-body">
         <div class="row mb-4">
             <div class="col-md-4">

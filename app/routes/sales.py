@@ -2,8 +2,9 @@
 销售管理路由
 """
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
+from flask_login import current_user
 from app import db
-from app.models import SalesOrder, SalesDetail, Medicine, StockBatch, Customer
+from app.models import SalesOrder, SalesDetail, Customer, Medicine, StockBatch, Employee
 from app.routes.auth import login_required, role_required
 from datetime import datetime, date
 
@@ -15,8 +16,9 @@ def generate_so_id():
     date_str = datetime.now().strftime('%Y%m%d')
     prefix = f'S{date_str}'
     
+    # 使用 cast 确保校对规则一致，防止 Illegal mix of collations 错误
     result = db.session.query(db.func.max(SalesOrder.so_id)).filter(
-        SalesOrder.so_id.like(f'{prefix}%')
+        SalesOrder.so_id.cast(db.String).like(f'{prefix}%')
     ).scalar()
     
     if result:
@@ -62,20 +64,65 @@ def list():
 def create():
     """创建销售单"""
     if request.method == 'POST':
-        data = request.get_json()
+        # 尝试获取JSON数据，silent=True表示如果不是JSON不报错返回None
+        data = request.get_json(silent=True)
+        is_json_request = data is not None
+        
+        # 如果不是JSON请求，尝试从表单解析数据
+        if not data:
+            try:
+                cust_id = request.form.get('cus_id')
+                med_ids = request.form.getlist('med_id[]')
+                quantities = request.form.getlist('quantity[]')
+                
+                items = []
+                if med_ids and quantities:
+                    for i, med_id in enumerate(med_ids):
+                        if i < len(quantities) and med_id and quantities[i]:
+                            # 从数据库查询药品价格（比前端传值更安全）
+                            medicine = Medicine.query.get(med_id)
+                            if medicine:
+                                items.append({
+                                    'med_id': med_id,
+                                    'quantity': quantities[i],
+                                    # 优先使用 sale_price，如果没有则尝试 ref_sell_price
+                                    'unit_price': float(getattr(medicine, 'sale_price', getattr(medicine, 'ref_sell_price', 0)) or 0)
+                                })
+                
+                data = {
+                    'cus_id': cust_id,
+                    'items': items
+                }
+            except Exception as e:
+                flash(f'表单数据解析失败: {str(e)}', 'danger')
+                return redirect(url_for('sales.create'))
         
         if not data or not data.get('items'):
-            return jsonify({'success': False, 'message': '请添加销售明细'})
+            msg = '请添加销售明细'
+            if is_json_request:
+                return jsonify({'success': False, 'message': msg})
+            else:
+                flash(msg, 'warning')
+                return redirect(url_for('sales.create'))
         
         try:
             so_id = generate_so_id()
             total_price = 0
             
+            cust_id = data.get('cus_id')
+            if not cust_id:
+                msg = '请选择客户！所有购买者必须先登记为顾客。'
+                if is_json_request:
+                    return jsonify({'success': False, 'message': msg})
+                else:
+                    flash(msg, 'warning')
+                    return redirect(url_for('sales.create'))
+            
             # 创建销售单
             order = SalesOrder(
                 so_id=so_id,
-                emp_id=session['user_id'],
-                cus_id=int(data['cus_id']) if data.get('cus_id') else None,
+                emp_id=current_user.emp_id,
+                cus_id=int(cust_id),
                 total_price=0
             )
             db.session.add(order)
@@ -108,7 +155,10 @@ def create():
                     # 计算本批次扣减数量
                     deduct_qty = min(batch.cur_batch_qty, remaining_qty)
                     
-                    # 创建销售明细 (触发器会自动扣减库存)
+                    # 手动扣减批次库存，触发器将自动更新药品总库存
+                    batch.cur_batch_qty -= deduct_qty
+                    
+                    # 创建销售明细
                     detail = SalesDetail(
                         so_id=so_id,
                         batch_id=batch.batch_id,
@@ -130,19 +180,33 @@ def create():
                     customer.total_consume = float(customer.total_consume or 0) + total_price
             
             db.session.commit()
-            return jsonify({
-                'success': True, 
-                'message': f'销售单 {so_id} 创建成功',
-                'so_id': so_id,
-                'total': total_price
-            })
+            
+            if is_json_request:
+                return jsonify({
+                    'success': True, 
+                    'message': f'销售单 {so_id} 创建成功',
+                    'so_id': so_id,
+                    'total': total_price
+                })
+            else:
+                flash(f'销售单 {so_id} 创建成功，总金额: ¥{total_price:.2f}', 'success')
+                return redirect(url_for('sales.list'))
         
         except Exception as e:
             db.session.rollback()
-            return jsonify({'success': False, 'message': str(e)})
+            if is_json_request:
+                return jsonify({'success': False, 'message': str(e)})
+            else:
+                flash(f'销售失败: {str(e)}', 'danger')
+                return redirect(url_for('sales.create'))
     
-    # GET请求 - 显示创建页面
-    return render_template('sales/create.html')
+    # GET请求
+    customers = Customer.query.all()
+    medicines = Medicine.query.all()
+    
+    return render_template('sales/create.html', 
+                         customers=customers,
+                         medicines=medicines)
 
 
 @sales_bp.route('/detail/<so_id>')
@@ -182,8 +246,7 @@ def refund(so_id):
             batch = StockBatch.query.get(detail.batch_id)
             batch.cur_batch_qty += detail.quantity
             
-            medicine = Medicine.query.get(batch.med_id)
-            medicine.total_stock += detail.quantity
+            # 移除手动更新 medicine.total_stock 的逻辑，交由数据库触发器处理
         
         # 扣减客户累计消费
         if order.cus_id:

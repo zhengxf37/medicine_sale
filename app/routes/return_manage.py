@@ -5,13 +5,29 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from datetime import datetime, date
-from sqlalchemy import func, and_, or_
+from sqlalchemy import func, and_, or_, text
 from app import db
 from app.models import (PurchaseReturn, SalesReturn, PurchaseOrder, SalesOrder, 
-                        StockBatch, Medicine, Supplier, Employee)
+                        StockBatch, Medicine, Supplier, Employee, Customer, SalesDetail, PurchaseDetail)
 
 bp = Blueprint('return_manage', __name__, url_prefix='/return')
 
+def generate_return_id(model, prefix_char):
+    """在Python中生成退货单号，避免数据库校对规则冲突"""
+    date_str = datetime.now().strftime('%Y%m%d')
+    prefix = f'{prefix_char}{date_str}'
+    # 根据模型获取对应的ID字段名
+    id_attr = model.pr_id if prefix_char == 'PR' else model.sr_id
+    
+    result = db.session.query(func.max(id_attr)).filter(
+        id_attr.like(f'{prefix}%')
+    ).scalar()
+    
+    if result:
+        seq = int(result[-4:]) + 1
+    else:
+        seq = 1
+    return f'{prefix}{seq:04d}'
 
 @bp.route('/purchase')
 @login_required
@@ -71,8 +87,7 @@ def create_purchase_return():
                 return redirect(url_for('return_manage.create_purchase_return'))
             
             # 生成退货单号
-            result = db.session.execute('CALL sp_generate_pr_id(@pr_id)')
-            pr_id = db.session.execute('SELECT @pr_id').scalar()
+            pr_id = generate_return_id(PurchaseReturn, 'PR')
             
             # 创建退货记录
             purchase_return = PurchaseReturn(
@@ -158,8 +173,7 @@ def create_sales_return():
                 return redirect(url_for('return_manage.create_sales_return'))
             
             # 生成退货单号
-            result = db.session.execute('CALL sp_generate_sr_id(@sr_id)')
-            sr_id = db.session.execute('SELECT @sr_id').scalar()
+            sr_id = generate_return_id(SalesReturn, 'SR')
             
             # 创建退货记录
             sales_return = SalesReturn(
@@ -187,45 +201,51 @@ def create_sales_return():
     sales_orders = SalesOrder.query.filter_by(status=1).order_by(
         SalesOrder.sale_time.desc()).limit(100).all()
     
+    # 修正：移除 status=1 的过滤条件
+    customers = Customer.query.all()
+    
     return render_template('return_manage/sales_form.html',
-                         sales_orders=sales_orders)
-
+                         sales_orders=sales_orders,
+                         customers=customers)
 
 @bp.route('/api/order_batches/<order_id>')
 @login_required
 def get_order_batches(order_id):
     """获取订单关联的批次（用于退货）"""
-    # 判断是采购订单还是销售订单
-    if order_id.startswith('P'):
-        # 采购订单
-        details = db.session.query(
-            StockBatch.batch_id,
-            Medicine.med_name,
-            StockBatch.batch_no,
-            StockBatch.cur_batch_qty
-        ).join(Medicine).join(
-            'purchase_details'
-        ).filter(
-            PurchaseDetail.po_id == order_id
-        ).all()
-    else:
-        # 销售订单
-        details = db.session.query(
-            StockBatch.batch_id,
-            Medicine.med_name,
-            StockBatch.batch_no,
-            StockBatch.cur_batch_qty
-        ).join(Medicine).join(
-            'sales_details'
-        ).filter(
-            SalesDetail.so_id == order_id
-        ).all()
-    
-    batches = [{
-        'batch_id': b.batch_id,
-        'med_name': b.med_name,
-        'batch_no': b.batch_no,
-        'cur_qty': b.cur_batch_qty
-    } for b in details]
-    
-    return jsonify(batches)
+    try:
+        # 判断是采购订单还是销售订单
+        if order_id.startswith('P'):
+            # 采购订单：修复关联逻辑，确保获取所有药品的批次
+            details = db.session.query(
+                StockBatch.batch_id,
+                Medicine.med_name,
+                StockBatch.batch_no,
+                StockBatch.cur_batch_qty
+            ).join(Medicine, StockBatch.med_id == Medicine.med_id)\
+             .join(PurchaseDetail, and_(
+                 PurchaseDetail.po_id == order_id,
+                 PurchaseDetail.med_id == StockBatch.med_id
+             )).all()
+        else:
+            # 销售订单：修复关联逻辑
+            # 确保 SalesDetail 和 StockBatch 正确关联
+            details = db.session.query(
+                StockBatch.batch_id,
+                Medicine.med_name,
+                StockBatch.batch_no,
+                StockBatch.cur_batch_qty
+            ).join(Medicine, StockBatch.med_id == Medicine.med_id)\
+             .join(SalesDetail, SalesDetail.batch_id == StockBatch.batch_id)\
+             .filter(SalesDetail.so_id == order_id).all()
+        
+        batches = [{
+            'batch_id': b.batch_id,
+            'med_name': b.med_name,
+            'batch_no': b.batch_no,
+            'cur_qty': b.cur_batch_qty
+        } for b in details]
+        
+        return jsonify(batches)
+    except Exception as e:
+        print(f"Error getting batches for order {order_id}: {str(e)}")
+        return jsonify({'error': str(e)}), 500

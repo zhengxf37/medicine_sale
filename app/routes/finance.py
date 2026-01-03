@@ -5,7 +5,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from datetime import datetime, date, timedelta
-from sqlalchemy import func, and_, or_, extract
+from sqlalchemy import func, and_, or_, extract, text
 from app import db
 from app.models import FinanceDaily, SalesOrder, SalesDetail, StockBatch, InventoryCheck
 
@@ -94,7 +94,7 @@ def daily_settlement():
         
         # 调用存储过程进行日结
         db.session.execute(
-            'CALL sp_daily_finance_settlement(:p_date)',
+            text('CALL sp_daily_finance_settlement(:p_date)'),
             {'p_date': settle_date}
         )
         db.session.commit()
