@@ -102,38 +102,19 @@ def sales_report():
 @login_required
 @role_required('Admin', 'Finance', 'Sales')
 def top_selling():
-    """畅销榜单"""
-    days = request.args.get('days', 30, type=int)
+    """畅销榜单（使用视图）"""
+    from sqlalchemy import text
     limit = request.args.get('limit', 10, type=int)
     
-    start_date = date.today() - timedelta(days=days)
-    
-    query = db.session.query(
-        Medicine.med_id,
-        Medicine.med_name,
-        Medicine.spec,
-        Medicine.category,
-        func.sum(SalesDetail.quantity).label('total_sold'),
-        func.sum(SalesDetail.quantity * SalesDetail.unit_sell_price).label('total_revenue'),
-        func.count(func.distinct(SalesOrder.so_id)).label('order_count')
-    ).join(
-        StockBatch, Medicine.med_id == StockBatch.med_id
-    ).join(
-        SalesDetail, StockBatch.batch_id == SalesDetail.batch_id
-    ).join(
-        SalesOrder, SalesDetail.so_id == SalesOrder.so_id
-    ).filter(
-        SalesOrder.status == 1,
-        SalesOrder.sale_time >= start_date
-    ).group_by(
-        Medicine.med_id, Medicine.med_name, Medicine.spec, Medicine.category
-    ).order_by(
-        func.sum(SalesDetail.quantity).desc()
-    ).limit(limit).all()
+    # 直接使用v_top_selling视图
+    query = db.session.execute(
+        text(f"SELECT * FROM v_top_selling LIMIT :limit"),
+        {"limit": limit}
+    ).fetchall()
     
     return render_template('report/top_selling.html',
                           data=query,
-                          days=days,
+                          days=0,  # 视图不限制时间
                           limit=limit)
 
 

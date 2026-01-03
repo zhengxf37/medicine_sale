@@ -136,10 +136,12 @@ def expiring():
 @stock_bp.route('/low')
 @login_required
 def low_stock():
-    """低库存预警"""
-    medicines = Medicine.query.filter(
-        Medicine.total_stock < Medicine.alert_qty
-    ).order_by(Medicine.total_stock).all()
+    """低库存预警（使用视图）"""
+    from sqlalchemy import text
+    # 直接使用v_low_stock视图
+    medicines = db.session.execute(
+        text("SELECT * FROM v_low_stock ORDER BY total_stock ASC")
+    ).fetchall()
     
     return render_template('stock/low_stock.html', medicines=medicines)
 
