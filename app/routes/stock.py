@@ -15,10 +15,10 @@ stock_bp = Blueprint('stock', __name__)
 @login_required
 def overview():
     """库存概览"""
-    # 总库存价值
+    # 总库存价值（使用药品参考进价计算）
     total_value = db.session.query(
-        func.sum(StockBatch.cur_batch_qty * StockBatch.unit_cost)
-    ).filter(StockBatch.cur_batch_qty > 0).scalar() or 0
+        func.sum(StockBatch.cur_batch_qty * Medicine.ref_buy_price)
+    ).join(Medicine).filter(StockBatch.cur_batch_qty > 0).scalar() or 0
     
     # 药品总数
     medicine_count = Medicine.query.count()
@@ -159,7 +159,7 @@ def inventory_check():
             diff_qty = actual_qty - book_qty
             
             # 计算盈亏金额
-            diff_amount = diff_qty * float(batch.unit_cost or 0)
+            diff_amount = diff_qty * float(batch.medicine.ref_buy_price or 0)
             
             # 创建盘点记录 (触发器会自动调整库存)
             check = InventoryCheck(

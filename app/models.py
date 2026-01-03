@@ -132,9 +132,8 @@ class StockBatch(db.Model):
     med_id = db.Column(db.Integer, db.ForeignKey('t_medicine.med_id'), nullable=False)
     batch_no = db.Column(db.String(30), nullable=False, comment='批号')
     expiry_date = db.Column(db.Date, nullable=False, comment='有效期')
-    cur_batch_qty = db.Column(db.Integer, default=0, comment='当前库存')
-    unit_cost = db.Column(db.Numeric(10, 2), comment='成本单价')
-    created_at = db.Column(db.DateTime, default=datetime.now)
+    cur_batch_qty = db.Column(db.Integer, default=0, comment='当前批次数量')
+    create_time = db.Column(db.Date, comment='创建时间')
     
     # 关系
     sales_details = db.relationship('SalesDetail', backref='stock_batch', lazy='dynamic')
@@ -231,6 +230,7 @@ class SalesDetail(db.Model):
     sd_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     so_id = db.Column(db.String(20), db.ForeignKey('t_sales_order.so_id'), nullable=False)
     batch_id = db.Column(db.Integer, db.ForeignKey('t_stock_batch.batch_id'), nullable=False)
+    med_id = db.Column(db.Integer, db.ForeignKey('t_medicine.med_id'), nullable=False, comment='药品ID')
     quantity = db.Column(db.Integer, nullable=False, comment='数量')
     unit_sell_price = db.Column(db.Numeric(10, 2), nullable=False, comment='售价')
     

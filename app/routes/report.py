@@ -42,11 +42,13 @@ def sales_report():
             func.count(func.distinct(SalesOrder.so_id)).label('order_count'),
             func.sum(SalesDetail.quantity).label('total_qty'),
             func.sum(SalesDetail.quantity * SalesDetail.unit_sell_price).label('total_sales'),
-            func.sum(SalesDetail.quantity * (SalesDetail.unit_sell_price - StockBatch.unit_cost)).label('total_profit')
+            func.sum(SalesDetail.quantity * (SalesDetail.unit_sell_price - Medicine.ref_buy_price)).label('total_profit')
         ).join(
             SalesDetail, SalesOrder.so_id == SalesDetail.so_id
         ).join(
             StockBatch, SalesDetail.batch_id == StockBatch.batch_id
+        ).join(
+            Medicine, StockBatch.med_id == Medicine.med_id
         ).filter(
             SalesOrder.status == 1,
             SalesOrder.sale_time >= start_date,
@@ -63,11 +65,13 @@ def sales_report():
             func.count(func.distinct(SalesOrder.so_id)).label('order_count'),
             func.sum(SalesDetail.quantity).label('total_qty'),
             func.sum(SalesDetail.quantity * SalesDetail.unit_sell_price).label('total_sales'),
-            func.sum(SalesDetail.quantity * (SalesDetail.unit_sell_price - StockBatch.unit_cost)).label('total_profit')
+            func.sum(SalesDetail.quantity * (SalesDetail.unit_sell_price - Medicine.ref_buy_price)).label('total_profit')
         ).join(
             SalesDetail, SalesOrder.so_id == SalesDetail.so_id
         ).join(
             StockBatch, SalesDetail.batch_id == StockBatch.batch_id
+        ).join(
+            Medicine, StockBatch.med_id == Medicine.med_id
         ).filter(
             SalesOrder.status == 1,
             SalesOrder.sale_time >= start_date,
@@ -150,12 +154,12 @@ def profit_analysis():
     # 销售统计
     sales_data = db.session.query(
         func.sum(SalesDetail.quantity * SalesDetail.unit_sell_price).label('total_sales'),
-        func.sum(SalesDetail.quantity * StockBatch.unit_cost).label('total_cost'),
-        func.sum(SalesDetail.quantity * (SalesDetail.unit_sell_price - StockBatch.unit_cost)).label('gross_profit')
-    ).join(
-        StockBatch, SalesDetail.batch_id == StockBatch.batch_id
+        func.sum(SalesDetail.quantity * Medicine.ref_buy_price).label('total_cost'),
+        func.sum(SalesDetail.quantity * (SalesDetail.unit_sell_price - Medicine.ref_buy_price)).label('gross_profit')
     ).join(
         SalesOrder, SalesDetail.so_id == SalesOrder.so_id
+    ).join(
+        Medicine, SalesDetail.med_id == Medicine.med_id
     ).filter(
         SalesOrder.status == 1,
         SalesOrder.sale_time >= start_date,
@@ -204,7 +208,7 @@ def inventory_value():
         Medicine.category,
         func.count(func.distinct(Medicine.med_id)).label('medicine_count'),
         func.sum(StockBatch.cur_batch_qty).label('total_qty'),
-        func.sum(StockBatch.cur_batch_qty * StockBatch.unit_cost).label('total_cost'),
+        func.sum(StockBatch.cur_batch_qty * Medicine.ref_buy_price).label('total_cost'),
         func.sum(StockBatch.cur_batch_qty * Medicine.ref_sell_price).label('total_value')
     ).join(
         StockBatch, Medicine.med_id == StockBatch.med_id
@@ -217,7 +221,7 @@ def inventory_value():
     # 总计
     total = db.session.query(
         func.sum(StockBatch.cur_batch_qty).label('total_qty'),
-        func.sum(StockBatch.cur_batch_qty * StockBatch.unit_cost).label('total_cost'),
+        func.sum(StockBatch.cur_batch_qty * Medicine.ref_buy_price).label('total_cost'),
         func.sum(StockBatch.cur_batch_qty * Medicine.ref_sell_price).label('total_value')
     ).join(
         Medicine, StockBatch.med_id == Medicine.med_id

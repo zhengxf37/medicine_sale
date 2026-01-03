@@ -155,13 +155,11 @@ def create():
                     # 计算本批次扣减数量
                     deduct_qty = min(batch.cur_batch_qty, remaining_qty)
                     
-                    # 手动扣减批次库存，触发器将自动更新药品总库存
-                    batch.cur_batch_qty -= deduct_qty
-                    
-                    # 创建销售明细
+                    # 创建销售明细（触发器会自动扣减库存）
                     detail = SalesDetail(
                         so_id=so_id,
                         batch_id=batch.batch_id,
+                        med_id=med_id,
                         quantity=deduct_qty,
                         unit_sell_price=sell_price
                     )
@@ -241,12 +239,23 @@ def refund(so_id):
         return redirect(url_for('sales.detail', so_id=so_id))
     
     try:
-        # 恢复库存
+        # 创建销售退货记录（由触发器自动恢复库存）
+        from app.models import SalesReturn
+        
         for detail in order.details:
-            batch = StockBatch.query.get(detail.batch_id)
-            batch.cur_batch_qty += detail.quantity
-            
-            # 移除手动更新 medicine.total_stock 的逻辑，交由数据库触发器处理
+            # 创建退货记录
+            sr_id = f"SR{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            sales_return = SalesReturn(
+                sr_id=sr_id,
+                so_id=so_id,
+                batch_id=detail.batch_id,  # INT类型
+                quantity=detail.quantity,
+                return_time=datetime.now(),
+                reason='销售退货',
+                status=1,
+                emp_id=current_user.emp_id
+            )
+            db.session.add(sales_return)
         
         # 扣减客户累计消费
         if order.cus_id:
