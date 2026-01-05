@@ -12,21 +12,11 @@ purchase_bp = Blueprint('purchase', __name__)
 
 
 def generate_po_id():
-    """生成进货单号"""
-    date_str = datetime.now().strftime('%Y%m%d')
-    prefix = f'P{date_str}'
-    
-    # 查询当日最大单号
-    result = db.session.query(db.func.max(PurchaseOrder.po_id)).filter(
-        PurchaseOrder.po_id.like(f'{prefix}%')
-    ).scalar()
-    
-    if result:
-        seq = int(result[-4:]) + 1
-    else:
-        seq = 1
-    
-    return f'{prefix}{seq:04d}'
+    """调用数据库函数生成进货单号"""
+    po_id = db.session.execute(text("SELECT fn_generate_po_id()") ).scalar()
+    if not po_id:
+        raise RuntimeError('无法生成进货单号')
+    return po_id
 
 
 @purchase_bp.route('/')

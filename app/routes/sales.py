@@ -7,26 +7,17 @@ from app import db
 from app.models import SalesOrder, SalesDetail, Customer, Medicine, StockBatch, Employee
 from app.routes.auth import login_required, role_required
 from datetime import datetime, date
+from sqlalchemy import text
 
 sales_bp = Blueprint('sales', __name__)
 
 
 def generate_so_id():
-    """生成销售单号"""
-    date_str = datetime.now().strftime('%Y%m%d')
-    prefix = f'S{date_str}'
-    
-    # 使用 cast 确保校对规则一致，防止 Illegal mix of collations 错误
-    result = db.session.query(db.func.max(SalesOrder.so_id)).filter(
-        SalesOrder.so_id.cast(db.String).like(f'{prefix}%')
-    ).scalar()
-    
-    if result:
-        seq = int(result[-4:]) + 1
-    else:
-        seq = 1
-    
-    return f'{prefix}{seq:04d}'
+    """调用数据库函数生成销售单号"""
+    so_id = db.session.execute(text("SELECT fn_generate_so_id()") ).scalar()
+    if not so_id:
+        raise RuntimeError('无法生成销售单号')
+    return so_id
 
 
 @sales_bp.route('/')

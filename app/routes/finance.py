@@ -115,58 +115,33 @@ def monthly_report():
     year = request.args.get('year', date.today().year, type=int)
     month = request.args.get('month', date.today().month, type=int)
     
-    # 查询月度数据
-    monthly_data = db.session.query(
-        func.sum(FinanceDaily.sales_revenue).label('total_revenue'),
-        func.sum(FinanceDaily.sales_profit).label('total_profit'),
-        func.sum(FinanceDaily.sales_return_amt).label('total_sales_return'),
-        func.sum(FinanceDaily.purc_return_amt).label('total_purc_return'),
-        func.sum(FinanceDaily.inv_loss_amt).label('total_inv_loss'),
-        func.sum(FinanceDaily.inv_gain_amt).label('total_inv_gain'),
-        func.count(FinanceDaily.day_id).label('days_count')
-    ).filter(
-        extract('year', FinanceDaily.day_id) == year,
-        extract('month', FinanceDaily.day_id) == month
-    ).first()
+    # 调用存储过程获取月度汇总
+    proc_result = db.session.execute(
+        text('CALL sp_monthly_report(:p_year, :p_month)'),
+        {'p_year': year, 'p_month': month}
+    ).fetchone()
     
-    # 处理空结果
-    if monthly_data:
-        total_revenue = float(monthly_data.total_revenue or 0)
-        total_profit = float(monthly_data.total_profit or 0)
-        total_sales_return = float(monthly_data.total_sales_return or 0)
-        total_purc_return = float(monthly_data.total_purc_return or 0)
-        total_inv_loss = float(monthly_data.total_inv_loss or 0)
-        total_inv_gain = float(monthly_data.total_inv_gain or 0)
-        days_count = monthly_data.days_count or 0
-        
-        monthly_data_dict = {
-            'total_revenue': total_revenue,
-            'total_profit': total_profit,
-            'total_sales_return': total_sales_return,
-            'total_purc_return': total_purc_return,
-            'total_inv_loss': total_inv_loss,
-            'total_inv_gain': total_inv_gain,
-            'days_count': days_count
-        }
-    else:
-        monthly_data_dict = {
-            'total_revenue': 0,
-            'total_profit': 0,
-            'total_sales_return': 0,
-            'total_purc_return': 0,
-            'total_inv_loss': 0,
-            'total_inv_gain': 0,
-            'days_count': 0
-        }
+    monthly_data_dict = {
+        'total_revenue': 0.0,
+        'total_profit': 0.0,
+        'total_sales_return': 0.0,
+        'total_purc_return': 0.0,
+        'total_inv_loss': 0.0,
+        'total_inv_gain': 0.0,
+        'days_count': FinanceDaily.query.filter(
+            extract('year', FinanceDaily.day_id) == year,
+            extract('month', FinanceDaily.day_id) == month
+        ).count(),
+        'order_count': 0
+    }
     
-    # 计算净利润
+    if proc_result:
+        monthly_data_dict['total_revenue'] = float(proc_result.total_sales or 0)
+        monthly_data_dict['total_inv_loss'] = float(proc_result.inventory_loss or 0)
+        monthly_data_dict['order_count'] = int(proc_result.order_count or 0)
+    
+    # 计算净利润（目前存储过程未返回利润相关字段，默认以0处理）
     net_profit = 0
-    if monthly_data_dict['total_profit']:
-        net_profit = (float(monthly_data_dict['total_profit'] or 0) - 
-                     float(monthly_data_dict['total_sales_return'] or 0) +
-                     float(monthly_data_dict['total_purc_return'] or 0) -
-                     float(monthly_data_dict['total_inv_loss'] or 0) +
-                     float(monthly_data_dict['total_inv_gain'] or 0))
     
     # 获取每日趋势数据
     daily_trend = FinanceDaily.query.filter(

@@ -480,7 +480,7 @@ BEGIN
     
     SELECT IFNULL(MAX(CAST(RIGHT(po_id, 4) AS UNSIGNED)), 0) + 1 INTO v_seq
     FROM t_purchase_order
-    WHERE po_id LIKE CONCAT('P', v_date_str, '%');
+    WHERE po_id LIKE CONCAT('P', v_date_str, '%') COLLATE utf8mb4_0900_ai_ci;
     
     RETURN CONCAT('P', v_date_str, LPAD(v_seq, 4, '0'));
 END//
@@ -497,7 +497,7 @@ BEGIN
     
     SELECT IFNULL(MAX(CAST(RIGHT(so_id, 4) AS UNSIGNED)), 0) + 1 INTO v_seq
     FROM t_sales_order
-    WHERE so_id LIKE CONCAT('S', v_date_str, '%');
+    WHERE so_id LIKE CONCAT('S', v_date_str, '%') COLLATE utf8mb4_0900_ai_ci;
     
     RETURN CONCAT('S', v_date_str, LPAD(v_seq, 4, '0'));
 END//
@@ -525,6 +525,67 @@ BEGIN
     LEFT JOIN t_inventory_check ic ON ic.check_time BETWEEN v_start_date AND v_end_date
     WHERE so.status = 1
       AND so.sale_time BETWEEN v_start_date AND v_end_date;
+END//
+
+-- 存储过程: 财务日结
+DROP PROCEDURE IF EXISTS sp_daily_finance_settlement//
+CREATE PROCEDURE sp_daily_finance_settlement(
+        IN p_date DATE
+)
+BEGIN
+        DECLARE v_sales_revenue DECIMAL(12,2) DEFAULT 0;
+        DECLARE v_sales_profit DECIMAL(12,2) DEFAULT 0;
+        DECLARE v_sales_return DECIMAL(12,2) DEFAULT 0;
+        DECLARE v_purc_return DECIMAL(12,2) DEFAULT 0;
+        DECLARE v_inv_loss DECIMAL(12,2) DEFAULT 0;
+        DECLARE v_inv_gain DECIMAL(12,2) DEFAULT 0;
+
+        -- 销售收入与毛利（用参考进价估算成本）
+        SELECT 
+                IFNULL(SUM(sd.quantity * sd.unit_sell_price), 0),
+                IFNULL(SUM(sd.quantity * (sd.unit_sell_price - IFNULL(m.ref_buy_price, 0))), 0)
+        INTO v_sales_revenue, v_sales_profit
+        FROM t_sales_order so
+        JOIN t_sales_detail sd ON so.so_id = sd.so_id
+        JOIN t_medicine m ON sd.med_id = m.med_id
+        WHERE so.status = 1
+            AND DATE(so.sale_time) = p_date;
+
+        -- 销售退货金额（用参考售价估算）
+        SELECT IFNULL(SUM(sr.quantity * IFNULL(m.ref_sell_price, 0)), 0)
+        INTO v_sales_return
+        FROM t_sales_return sr
+        JOIN t_stock_batch sb ON sr.batch_id = sb.batch_id
+        JOIN t_medicine m ON sb.med_id = m.med_id
+        WHERE sr.status = 1
+            AND DATE(sr.return_time) = p_date;
+
+        -- 购进退出金额（用参考进价估算）
+        SELECT IFNULL(SUM(pr.quantity * IFNULL(m.ref_buy_price, 0)), 0)
+        INTO v_purc_return
+        FROM t_purchase_return pr
+        JOIN t_stock_batch sb ON pr.batch_id = sb.batch_id
+        JOIN t_medicine m ON sb.med_id = m.med_id
+        WHERE pr.status = 1
+            AND DATE(pr.return_time) = p_date;
+
+        -- 盘点盈亏
+        SELECT 
+                IFNULL(SUM(CASE WHEN ic.diff_amount < 0 THEN -ic.diff_amount ELSE 0 END), 0),
+                IFNULL(SUM(CASE WHEN ic.diff_amount > 0 THEN ic.diff_amount ELSE 0 END), 0)
+        INTO v_inv_loss, v_inv_gain
+        FROM t_inventory_check ic
+        WHERE DATE(ic.check_time) = p_date;
+
+        -- 写入/更新日结表
+        DELETE FROM t_finance_daily WHERE day_id = p_date;
+        INSERT INTO t_finance_daily (
+                day_id, sales_revenue, sales_profit, sales_return_amt, purc_return_amt,
+                inv_loss_amt, inv_gain_amt, created_at, updated_at
+        ) VALUES (
+                p_date, v_sales_revenue, v_sales_profit, v_sales_return, v_purc_return,
+                v_inv_loss, v_inv_gain, NOW(), NOW()
+        );
 END//
 
 DELIMITER ;
