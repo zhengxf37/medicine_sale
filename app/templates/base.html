@@ -161,44 +161,44 @@
             
             <li class="nav-section">基础信息</li>
             <li class="nav-item">
-                <a class="nav-link {{ 'active' if 'medicine' in request.endpoint }}" href="{{ url_for('medicine.list') }}">
+                <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('medicine.') }}" href="{{ url_for('medicine.list') }}">
                     <i class="fas fa-capsules"></i> 药品管理
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link {{ 'active' if 'supplier' in request.endpoint }}" href="{{ url_for('supplier.list') }}">
+                <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('supplier.') }}" href="{{ url_for('supplier.list') }}">
                     <i class="fas fa-truck"></i> 供应商管理
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link {{ 'active' if 'customer' in request.endpoint }}" href="{{ url_for('customer.list') }}">
+                <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('customer.') }}" href="{{ url_for('customer.list') }}">
                     <i class="fas fa-users"></i> 客户管理
                 </a>
             </li>
             
             <li class="nav-section">业务操作</li>
             <li class="nav-item">
-                <a class="nav-link {{ 'active' if 'purchase' in request.endpoint }}" href="{{ url_for('purchase.list') }}">
+                <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('purchase.') }}" href="{{ url_for('purchase.list') }}">
                     <i class="fas fa-shopping-cart"></i> 进货管理
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link {{ 'active' if 'sales' in request.endpoint }}" href="{{ url_for('sales.list') }}">
+                <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('sales.') }}" href="{{ url_for('sales.list') }}">
                     <i class="fas fa-cash-register"></i> 销售管理
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link {{ 'active' if 'stock' in request.endpoint }}" href="{{ url_for('stock.overview') }}">
+                <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('stock.') }}" href="{{ url_for('stock.overview') }}">
                     <i class="fas fa-warehouse"></i> 库存管理
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link {{ 'active' if 'return_manage' in request.endpoint }}" href="{{ url_for('return_manage.purchase_return_list') }}">
+                <a class="nav-link {{ 'active' if request.endpoint and 'return_manage.purchase_return' in request.endpoint }}" href="{{ url_for('return_manage.purchase_return_list') }}">
                     <i class="fas fa-undo"></i> 进货退货
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link {{ 'active' if 'sales_return' in request.endpoint }}" href="{{ url_for('return_manage.sales_return_list') }}">
+                <a class="nav-link {{ 'active' if request.endpoint and 'return_manage.sales_return' in request.endpoint }}" href="{{ url_for('return_manage.sales_return_list') }}">
                     <i class="fas fa-reply"></i> 销售退货
                 </a>
             </li>
@@ -206,12 +206,12 @@
             {% if current_user.is_authenticated and current_user.role in ['Admin', 'Finance'] %}
             <li class="nav-section">统计报表</li>
             <li class="nav-item">
-                <a class="nav-link {{ 'active' if 'report' in request.endpoint }}" href="{{ url_for('report.index') }}">
+                <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('report.') }}" href="{{ url_for('report.index') }}">
                     <i class="fas fa-chart-bar"></i> 经营报表
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link {{ 'active' if 'finance' in request.endpoint }}" href="{{ url_for('finance.daily_report') }}">
+                <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('finance.') }}" href="{{ url_for('finance.daily_report') }}">
                     <i class="fas fa-chart-line"></i> 财务报表
                 </a>
             </li>
